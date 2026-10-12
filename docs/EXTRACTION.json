@@ -355,18 +355,6 @@
       "sha256": "4fa1ac7996813789699d52b75e331844444750a8fa5ce99b902fe2274e6e544a"
     },
     {
-      "path": "extensions/app-images/dist/weezy-app-images.js",
-      "sha256": "3adf196823daa6adf6160ac63d9d805870a3c2868c5ed6f3abc08e438d3a2123"
-    },
-    {
-      "path": "extensions/app-images/dist/weezy-app-images.js.map",
-      "sha256": "90e2aff10ea11d04206933df7cb5eda4e4ca2497eb7e385cbee83a48d4572850"
-    },
-    {
-      "path": "extensions/app-images/dist/weezy-app-images.metafile.json",
-      "sha256": "6c8fe994ab2701f73732211fd2f54e88f4a4c25cea587fac97c7887e2d068fb7"
-    },
-    {
       "path": "extensions/app-images/manifest.json",
       "sha256": "4cc4bebb6289109da2e00624433ddcca1bac6a4adee906599f3ec1d2932a5efd"
     },
