@@ -2,7 +2,7 @@
 
 The independent source repository for **Weezy Pop App Editor**, used by Nat and Lou inside Shopify. Develop, test and release this editor here without building or releasing the iPhone app.
 
-Extracted on 12 October 2026 from the tested mobile checkout at `632fd06c0224479af3b76b4451ff5c8aebaceabb`. This migration publishes source only. It does not deploy an extension, change staff access or save any Shopify data.
+Extracted on 12 October 2026 as its own project ([provenance](docs/EXTRACTION.json)). It depends on no other repository: the metafield contract lives here in `contracts/`, and the iPhone app in [pete001/weezy-app](https://github.com/pete001/weezy-app) reads it.
 
 ## Start here
 
@@ -14,7 +14,7 @@ npm run verify
 npm run preview
 ```
 
-`verify` runs the editor and Shopify contract regression suites, TypeScript and the Shopify production extension build. These checks use injected requests and synthetic accounts, not live Shopify writes. No Xcode, Swift source, mobile checkout, Fly credentials or Shopify login is required for them.
+`verify` runs the editor and Shopify contract regression suites, TypeScript and the Shopify production extension build. These checks use injected requests and synthetic accounts, not live Shopify writes. No Xcode, other checkout, Fly credentials or Shopify login is required for them.
 
 The preview opens at **http://127.0.0.1:48295**. Its changes are in memory and reset when restarted. It uses the actual editor components and public Shopify product photos with synthetic product/customer IDs. Shopify's Polaris script needs internet access. `npm run dev` is different: it uses authenticated Shopify development tooling and requires an explicitly selected test store.
 
@@ -41,35 +41,33 @@ flowchart LR
     STAFF[Nat and Lou in Shopify] --> EDITOR[This repository: App Editor]
     EDITOR -->|Online authenticated queries and app-only metafields| SHOPIFY[Shopify source of truth]
     SHOPIFY -->|Published products, prices, variants and checkout| WEB[weezypop.com]
-    SHOPIFY -->|App-only metadata and verified ownership| SERVICE[Existing Fly reader in weezy-ios]
-    SERVICE --> IOS[iPhone app in weezy-ios]
+    SHOPIFY -->|App-only metadata and verified ownership| SERVICE[App service on Fly, in weezy-app]
+    SERVICE --> IOS[iPhone app in weezy-app]
+    SERVICE -.->|sync and offer status| EDITOR
 ```
 
-The editor writes `charm_club` metafields. The native app and existing Fly service consume them. Website product photos, prices, variants, collections, themes, stock and discounts remain outside the editor's write scope. Shopify still owns every product and variant identity, price and availability.
+The editor writes `charm_club` metafields. The app service and the iPhone app (both in pete001/weezy-app) consume them; the editor reads two status endpoints back from the app service (see `extensions/app-images/src/app-service.mjs`). Website product photos, prices, variants, collections, themes, stock and discounts remain outside the editor's write scope. Shopify still owns every product and variant identity, price and availability.
 
-Changes to existing metadata values can reach the app after its reader cache refresh, currently up to five minutes, followed by app refresh. Changes to field schemas, offer rules or ownership semantics need a coordinated reader change in `weezy-ios`; releasing this editor alone cannot update Swift or Fly code. [Compatibility and ownership](docs/SHOPIFY-CONTRACT.md).
+Changes to existing metadata values reach the app after the app service's cache refresh, currently up to five minutes, followed by app refresh. Changes to field schemas, offer rules or ownership semantics change the contract in `contracts/`: ship the matching reader change in weezy-app first. [Contract and ownership](docs/SHOPIFY-CONTRACT.md).
 
 ## Repository layout
 
 ```text
 extensions/app-images/src/  Shopify UI, workflows and fallback content
-contracts/                 Extracted Shopify editor logic and reader compatibility tests
+contracts/                 The charm_club metafield contract (validators, editors, readers) and its tests
 assets/                    Existing admin app icon and branding
 fixtures/                  Synthetic catalogue and synthetic proof image
 qa/preview.mjs             Local in-memory editor preview
-scripts/check-contracts.mjs Optional read-only comparison with a mobile checkout
 shopify.app.toml           Existing App Editor identity and approved scopes
 .github/workflows/verify.yml Independent CI; no deployment or signing secrets
 ```
 
-The `contracts` modules are a versioned snapshot, not an npm dependency on the mobile project. [Extraction provenance](docs/EXTRACTION.json) records the original file hashes and adaptations. Two tests for the mobile HTTP router remain in the mobile repository; their editor/validation cases are retained here. Public customer data, private keys, CLI caches, production databases and live bulk-publishing scripts are excluded.
+The `contracts` modules are the canonical, versioned definition of the metafields. pete001/weezy-app takes its copy from here. [Extraction provenance](docs/EXTRACTION.json) records where they came from. Public customer data, private keys, CLI caches, production databases and live bulk-publishing scripts are excluded.
 
 ## Working and releasing independently
 
 Create a feature branch, make the smallest admin change, run `npm run verify` and review the affected workflow. CI checks pull requests and `main` on an isolated hosted runner. It never deploys or gets Shopify credentials.
 
-The same installed App Editor client ID and extension UID are retained, so an authorized deployment updates the existing app. Do not create a replacement app, increase scopes or deploy to the iOS reader app. [Deployment checklist](docs/DEPLOYMENT.md).
-
-The copy in `weezy-ios/shopify-image-editor` is a frozen compatibility snapshot for older service tests and historical evidence. This repository owns future admin development. Keep schema changes coordinated; do not maintain two competing editor implementations.
+The same installed App Editor client ID and extension UID are retained, so an authorized deployment updates the existing app. Do not create a replacement app, increase scopes or deploy to any other app. [Deployment checklist](docs/DEPLOYMENT.md).
 
 [Dependency audit follow-up](docs/DEPENDENCIES.md): the inherited lockfile currently has11 audit findings. Production build/tests pass; no major Shopify downgrade was applied during extraction.

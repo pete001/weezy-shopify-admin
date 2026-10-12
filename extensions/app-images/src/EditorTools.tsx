@@ -2,6 +2,7 @@ import {useEffect,useState} from 'preact/hooks';
 import {Button,Clickable} from './Controls';
 import {finishPhoto,firstSetFinish} from './photo-workflow.mjs';
 import {categoryLabels,syncState} from './workflows.mjs';
+import {appServiceURL} from './app-service.mjs';
 export function ProductPreview({product}:{product:{id:string;title:string;appHidden:boolean;appCategory:string;images:{url:string;hidden:boolean;alt?:string}[]}}){
  const [index,setIndex]=useState(0);const photos=product.images.filter(p=>!p.hidden);
  useEffect(()=>setIndex(0),[product.id]);const photo=photos[Math.min(index,photos.length-1)];
@@ -17,7 +18,7 @@ export function ProductPreview({product}:{product:{id:string;title:string;appHid
 export function SyncStatus({kind,handle,digest,dirty=false}:{kind:'products'|'sets'|'order';handle?:string;digest?:string|null;dirty?:boolean}){
  const [status,setStatus]=useState<any>(null),[checking,setChecking]=useState(false),[error,setError]=useState('');
  useEffect(()=>{let active=true,controller:AbortController|null=null;
-  const check=async()=>{controller?.abort();controller=new AbortController();setChecking(true);setError('');try{const r=await fetch('https://weezy-pop-club.fly.dev/v1/catalogue/sync',{signal:controller.signal});if(!r.ok)throw Error();const body=await r.json();if(active)setStatus(body);}catch(e){if(active&&(e as Error).name!=='AbortError')setError('Could not check app sync. Your Shopify save is unaffected.');}finally{if(active)setChecking(false);}};
+  const check=async()=>{controller?.abort();controller=new AbortController();setChecking(true);setError('');try{const r=await fetch(appServiceURL('/v1/catalogue/sync'),{signal:controller.signal});if(!r.ok)throw Error();const body=await r.json();if(active)setStatus(body);}catch(e){if(active&&(e as Error).name!=='AbortError')setError('Could not check app sync. Your Shopify save is unaffected.');}finally{if(active)setChecking(false);}};
   void check();const timer=setInterval(check,30000);return()=>{active=false;controller?.abort();clearInterval(timer);};
  },[kind,handle,digest]);
  const state=syncState(status,{kind,handle,digest,dirty});

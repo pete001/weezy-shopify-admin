@@ -11,6 +11,7 @@ import {setReadiness} from './workflows.mjs';
 import {SetPreview,SyncStatus} from './EditorTools';
 import {createSetDraftStore} from './set-drafts.mjs';
 import {BADGE_DEFAULT_COLOUR,BADGE_COLOURS,validBadgeAppearance,retainedBadgeHero,badgeMemberPhoto} from './badge-appearance.mjs';
+import {appServiceURL} from './app-service.mjs';
 declare const shopify:Api;
 type SetRecord={id:string;name:string;enabled:boolean;member_handles:string[];member_variant_ids?:Record<string,string[]>;member_quantities?:Record<string,number>;complete_set_offer?:{kind:string;discount_title:string;chain_handle:string};free_chain_offer?:{kind:string;discount_title:string;chain_handle:string};roman_ordinal:string;badge_name:string;badge_glyph:string;badge_color?:string;badge_hero_handle?:string};
 type Snapshot={ownerId:string;sets:SetRecord[];digest:string|null;seeded:boolean;updatedAt:string|null};
@@ -27,7 +28,7 @@ export function Sets({onBlocked}:{onBlocked:(blocked:boolean)=>void}){
  const [versions,setVersions]=useState<Record<string,{id:string;title:string;imageURL?:string|null}[]>>({}),[versionError,setVersionError]=useState('');
  const [details,setDetails]=useState<Record<string,any>>({}),[panel,setPanel]=useState('pieces'),[removal,setRemoval]=useState<string|null>(null);
  const [offerReady,setOfferReady]=useState(false);
- useEffect(()=>{void fetch('https://weezy-pop-club.fly.dev/v1/set-checkout-status').then(r=>r.ok?r.json():null).then(s=>setOfferReady(s?.ready===true)).catch(()=>setOfferReady(false));},[]);
+ useEffect(()=>{void fetch(appServiceURL('/v1/set-checkout-status')).then(r=>r.ok?r.json():null).then(s=>setOfferReady(s?.ready===true)).catch(()=>setOfferReady(false));},[]);
  const [busy,setBusy]=useState(true),[error,setError]=useState(''),[saved,setSaved]=useState(false),[recovered,setRecovered]=useState(false),[draftWarning,setDraftWarning]=useState('');
  const dirty=!!snapshot&&JSON.stringify(sets)!==JSON.stringify(snapshot.sets);
  const current=sets.find(s=>s.id===selected);
