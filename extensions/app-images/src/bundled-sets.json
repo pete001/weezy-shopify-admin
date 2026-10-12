@@ -1,0 +1,59 @@
+[
+  {
+    "id": "rodeo",
+    "name": "Rodeo Disco",
+    "roman_ordinal": "IV",
+    "member_handles": [
+      "cowboy-boot-charm",
+      "lucky-horseshoe-charm",
+      "icon-cow-print-engraved-heart",
+      "disco-necklace"
+    ],
+    "badge_name": "Disco Cowgirl",
+    "badge_glyph": "IV",
+    "enabled": true
+  },
+  {
+    "id": "celestial",
+    "name": "Celestial",
+    "roman_ordinal": "V",
+    "member_handles": [
+      "small-star-charm",
+      "sun-charm",
+      "moon-charm",
+      "planet-charm",
+      "large-star-charm"
+    ],
+    "badge_name": "Star Gazer",
+    "badge_glyph": "V",
+    "enabled": true
+  },
+  {
+    "id": "sweet-treats",
+    "name": "Sweet Treats",
+    "roman_ordinal": "V",
+    "member_handles": [
+      "battenberg-cake-charm",
+      "croissant-charm",
+      "ice-cream-charm",
+      "jelly-charm",
+      "cherry-charm"
+    ],
+    "badge_name": "Sweet Tooth",
+    "badge_glyph": "V",
+    "enabled": true
+  },
+  {
+    "id": "good-energy",
+    "name": "Good Energy",
+    "roman_ordinal": "III",
+    "member_handles": [
+      "smiley-charm",
+      "heart-eyes-smiley-charm",
+      "thunder-bolt-charm"
+    ],
+    "badge_name": "Good Energy",
+    "badge_glyph": "III",
+    "enabled": true
+  }
+]

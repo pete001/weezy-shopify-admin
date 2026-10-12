@@ -1,0 +1,132 @@
+{
+  "checkedOn": "2026-10-12",
+  "source": "npm audit against the inherited locked dependencies",
+  "counts": {
+    "info": 0,
+    "low": 0,
+    "moderate": 4,
+    "high": 7,
+    "critical": 0,
+    "total": 11
+  },
+  "packages": [
+    {
+      "name": "@shopify/cli",
+      "severity": "moderate",
+      "direct": true,
+      "range": "<=0.0.0-snapshot-20261009172349 || >=3.78.0",
+      "fixAvailable": {
+        "name": "@shopify/cli",
+        "version": "3.77.1",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@shopify/ui-extensions",
+      "severity": "high",
+      "direct": true,
+      "range": "<=0.0.0-snapshot-20260915203520 || >=2025.10.0-rc.1",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@ts-morph/common",
+      "severity": "high",
+      "direct": false,
+      "range": "0.2.0 - 0.24.0 || 0.26.0 - 0.27.0",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "brace-expansion",
+      "severity": "high",
+      "direct": false,
+      "range": "2.0.0 - 2.1.6",
+      "fixAvailable": true
+    },
+    {
+      "name": "braces",
+      "severity": "high",
+      "direct": false,
+      "range": "*",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "fast-glob",
+      "severity": "high",
+      "direct": false,
+      "range": "*",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "global-agent",
+      "severity": "moderate",
+      "direct": false,
+      "range": "<=3.0.0",
+      "fixAvailable": {
+        "name": "@shopify/cli",
+        "version": "3.77.1",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "micromatch",
+      "severity": "high",
+      "direct": false,
+      "range": ">=0.2.0",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "roarr",
+      "severity": "moderate",
+      "direct": false,
+      "range": "<=2.15.4",
+      "fixAvailable": {
+        "name": "@shopify/cli",
+        "version": "3.77.1",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "sprintf-js",
+      "severity": "moderate",
+      "direct": false,
+      "range": "*",
+      "fixAvailable": {
+        "name": "@shopify/cli",
+        "version": "3.77.1",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "ts-morph",
+      "severity": "high",
+      "direct": false,
+      "range": "6.0.1 - 23.0.0 || 25.0.0 - 26.0.0",
+      "fixAvailable": {
+        "name": "@shopify/ui-extensions",
+        "version": "2025.8.0",
+        "isSemVerMajor": true
+      }
+    }
+  ],
+  "decision": "Retain the verified Shopify2026.7 API and CLI4.8.0; npm recommended major downgrades are not applied during extraction. Investigate tooling dependency updates in a dedicated PR. No credentials or auto-deploy workflow are supplied."
+}

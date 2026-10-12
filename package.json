@@ -1,0 +1,33 @@
+{
+  "name": "weezy-shopify-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "extensions/*"
+  ],
+  "scripts": {
+    "build": "shopify app build",
+    "deploy": "shopify app deploy",
+    "dev": "shopify app dev",
+    "test": "node --test tests/*.test.mjs contracts/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "preview": "node qa/preview.mjs",
+    "verify": "npm test && npm run typecheck && npm run build",
+    "check-contracts": "node scripts/check-contracts.mjs"
+  },
+  "devDependencies": {
+    "@remote-dom/polyfill": "^1.5.1",
+    "@shopify/cli": "4.8.0",
+    "esbuild": "^0.28.2",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.2",
+    "@shopify/ui-extensions": "2026.7.0",
+    "preact": "10.27.3"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+.shopify/
+dist/
+build/
+.env
+.env.*
+.credentials/
+*.p8
+*.p12
+*.pem
+*.key
+*.sqlite*
+*.db
+.DS_Store
+coverage/

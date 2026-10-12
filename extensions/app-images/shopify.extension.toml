@@ -1,0 +1,9 @@
+api_version = "2026-07"
+[[extensions]]
+name = "App Images"
+handle = "weezy-app-images"
+uid = "612389a6-e8f4-c6cf-cc42-1d8e6ff7b347aaed6d1b"
+type = "ui_extension"
+[[extensions.targeting]]
+target = "admin.app.home.render"
+module = "./src/Home.tsx"

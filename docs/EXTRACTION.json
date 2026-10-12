@@ -1,0 +1,498 @@
+{
+  "extractedAt": "2026-10-12",
+  "sourceRepository": "https://github.com/pete001/weezy-ios",
+  "sourceCommit": "632fd06c0224479af3b76b4451ff5c8aebaceabb",
+  "files": [
+    {
+      "source": "shopify-image-editor/assets/shopify-app-icon.png",
+      "target": "assets/shopify-app-icon.png",
+      "sourceSHA256": "c91eef16e10579dccee5720905dc3d9d4db8f2ffba27a308be7c85b1446c40ea"
+    },
+    {
+      "source": "shopify-image-editor/assets/shopify-app-icon.svg",
+      "target": "assets/shopify-app-icon.svg",
+      "sourceSHA256": "686247575f0c658dea79e305c5783fc0501f2f411a162184067e87e61a28b73e"
+    },
+    {
+      "source": "shopify-image-editor/assets/weezy-pop-favicon.png",
+      "target": "assets/weezy-pop-favicon.png",
+      "sourceSHA256": "50d55ba4b41d2751b170d501551700ce98552eb71604661fcd643cfb88743af9"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/manifest.json",
+      "target": "extensions/app-images/manifest.json",
+      "sourceSHA256": "4cc4bebb6289109da2e00624433ddcca1bac6a4adee906599f3ec1d2932a5efd"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/shopify.extension.toml",
+      "target": "extensions/app-images/shopify.extension.toml",
+      "sourceSHA256": "1c7734b1faded0910ce93f7b4b7e7c628be90dd62a82e26dab9a4ffd02cf8fad"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Collections.tsx",
+      "target": "extensions/app-images/src/Collections.tsx",
+      "sourceSHA256": "127f181e94410b365d4aace279ec15cf91c0f25f886240bbad236ce91f88b81b"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Controls.tsx",
+      "target": "extensions/app-images/src/Controls.tsx",
+      "sourceSHA256": "a292cd4a599057736ce6b74e5eefd68d898f353efa0bccc68731bb2e06a78adf"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/EditorTools.tsx",
+      "target": "extensions/app-images/src/EditorTools.tsx",
+      "sourceSHA256": "d2de8ee5d9ef8b69f331f638b7ece1cce8bb10c315fee61d3f0a151c4b9be4ed"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/FinishPhotos.tsx",
+      "target": "extensions/app-images/src/FinishPhotos.tsx",
+      "sourceSHA256": "3e38836dff7b947c683d6244b5fe4ae8d251086f38b2ad1873ced98a87fb939f"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Home.tsx",
+      "target": "extensions/app-images/src/Home.tsx",
+      "sourceSHA256": "48f34effd82f97f654579e8b3391dfff7524731c226517d749eaa7da96657f23"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Ordering.tsx",
+      "target": "extensions/app-images/src/Ordering.tsx",
+      "sourceSHA256": "f04c39ce25a1f94a73cd81d23e9e1117343e7b09cef96a4b8cb0bd4637dceed0"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Overview.tsx",
+      "target": "extensions/app-images/src/Overview.tsx",
+      "sourceSHA256": "0c5e999c953fb80873caee3c9656e59a992aeddd2853e904a1de4f23aef228e2"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/Sets.tsx",
+      "target": "extensions/app-images/src/Sets.tsx",
+      "sourceSHA256": "ad8eac31532cb919403294c96e7512f82faa3ec5a9e8ea8dca49b80aa5fedfd4"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/badge-appearance.mjs",
+      "target": "extensions/app-images/src/badge-appearance.mjs",
+      "sourceSHA256": "11f1572a70069fc36c7775e43fb15bb0827b8199f634f75f3563da029d6aa7d9"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/bundled-heroes.json",
+      "target": "extensions/app-images/src/bundled-heroes.json",
+      "sourceSHA256": "c4e5f38f7828d6e80d70d5f4c255e254801cf27625d025963fd28b6eeaf655ab"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/bundled-numbers.json",
+      "target": "extensions/app-images/src/bundled-numbers.json",
+      "sourceSHA256": "ed5a85c0bc6e93f6de08a8908af823a98cdb25d4799b386d65c4931f91f51a70"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/bundled-sets.json",
+      "target": "extensions/app-images/src/bundled-sets.json",
+      "sourceSHA256": "abdea2f8b36623f42f722ff0c827cf9309d1c9dc5e38363e7b313b32d44e7c4e"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/navigation.mjs",
+      "target": "extensions/app-images/src/navigation.mjs",
+      "sourceSHA256": "6338113fbdafd6f8cc9175874d904aae037972854b1376115d744478b80612e2"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/photo-workflow.mjs",
+      "target": "extensions/app-images/src/photo-workflow.mjs",
+      "sourceSHA256": "8db8968992fd7439d19295902d812f69cccbe3eb64738e646ef20b59c8678150"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/session.mjs",
+      "target": "extensions/app-images/src/session.mjs",
+      "sourceSHA256": "df26187a0cbca69212a18718f7560a9a4bcfcebe82f7a383a9749797d0cc30ce"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/set-drafts.mjs",
+      "target": "extensions/app-images/src/set-drafts.mjs",
+      "sourceSHA256": "1a328c5bea5529c65b4f65bc78a4e2084f8be9374a29da30e0213a9374686a14"
+    },
+    {
+      "source": "shopify-image-editor/extensions/app-images/src/workflows.mjs",
+      "target": "extensions/app-images/src/workflows.mjs",
+      "sourceSHA256": "2cdb5d2c77bd14ed1ba8b257f84b7d1a6f426736080d092ca2748b1f074dcfc0"
+    },
+    {
+      "source": "shopify-image-editor/package-lock.json",
+      "target": "package-lock.json",
+      "sourceSHA256": "5777aad3aafb9df2badb998144d5d80c27d06bd2d591d13fdb09b1a5fe6c8a7e"
+    },
+    {
+      "source": "shopify-image-editor/package.json",
+      "target": "package.json",
+      "sourceSHA256": "a57d64234d4fb5d78c6605824ae19ef3c23ecf2e35cf97b19cebc3d8fe6cdd2b"
+    },
+    {
+      "source": "shopify-image-editor/shopify.app.toml",
+      "target": "shopify.app.toml",
+      "sourceSHA256": "0e0957ebeea434a382986f9e1e3c059cbfb29697b35dbf97f8d016b124bde252"
+    },
+    {
+      "source": "shopify-image-editor/tests/controls.test.mjs",
+      "target": "tests/controls.test.mjs",
+      "sourceSHA256": "3611dc1c4bff401eff77484bf5b2bdd1d9654e32cf2c77dfd5b86609aa75cf8f"
+    },
+    {
+      "source": "shopify-image-editor/tests/editor-flow.test.mjs",
+      "target": "tests/editor-flow.test.mjs",
+      "sourceSHA256": "d0645cffa52a8da256a4f199d6f4a3cdcbf397d035ec51f2827c56f3ee7f25a7"
+    },
+    {
+      "source": "shopify-image-editor/tests/photo-workflow.test.mjs",
+      "target": "tests/photo-workflow.test.mjs",
+      "sourceSHA256": "ba89bec57fc7735fe6e4285e3a78ab9f0e46beb01132f8608fc9c3080dfe4d18"
+    },
+    {
+      "source": "shopify-image-editor/tests/set-handle-drafts.test.mjs",
+      "target": "tests/set-handle-drafts.test.mjs",
+      "sourceSHA256": "301b9e5d8282dfa60761d57b1a7dd12ebdd76ccf7c73fcde5b6c889283add8db"
+    },
+    {
+      "source": "shopify-image-editor/tests/workflows.test.mjs",
+      "target": "tests/workflows.test.mjs",
+      "sourceSHA256": "43de58bf24ac10835837183ec1ef1f034ce054d89747883b4adf43e543367555"
+    },
+    {
+      "source": "shopify-image-editor/tsconfig.json",
+      "target": "tsconfig.json",
+      "sourceSHA256": "ae924b0d74048a3787c4fd135e2c08137594dfc78388037a8f0ffebefe800c0d"
+    },
+    {
+      "source": "service/app-image-editor.mjs",
+      "target": "contracts/app-image-editor.mjs",
+      "sourceSHA256": "a4e57b674318e285c4e526ae6784e4153bfcf79932cc438c39dbbafb7ef8381f"
+    },
+    {
+      "source": "service/app-image-settings.mjs",
+      "target": "contracts/app-image-settings.mjs",
+      "sourceSHA256": "3538b5a32fd944bfd4afa27295ae36d2f9e13dbca91b7f46742adbd5372fcba4"
+    },
+    {
+      "source": "service/app-sets.mjs",
+      "target": "contracts/app-sets.mjs",
+      "sourceSHA256": "a60fd8a56aca3cf4717410f47dffa0392ac04011810980183cd5bceecc35ef81"
+    },
+    {
+      "source": "service/app-order.mjs",
+      "target": "contracts/app-order.mjs",
+      "sourceSHA256": "853a4e5a96fd5b4b51ccc03e9cd97acf944cb4f89e17bbcb35182381fa3595da"
+    },
+    {
+      "source": "service/manual-collection.mjs",
+      "target": "contracts/manual-collection.mjs",
+      "sourceSHA256": "c5ea89feb45dfe9f3fb9660f2c1e5e6afbd03a95fd097490318990ff44d60a32"
+    },
+    {
+      "source": "service/collection-claims.mjs",
+      "target": "contracts/collection-claims.mjs",
+      "sourceSHA256": "e8f5a6094ac2325dcede8d9d1a298129128a8eaca8ad0be94afbec8b46f66352"
+    },
+    {
+      "source": "service/shopify-admin-auth.mjs",
+      "target": "contracts/shopify-admin-auth.mjs",
+      "sourceSHA256": "b2ec882d43576d0590a6405a53e36bb5c9d39f545dd9b148816e3dded2a7e761"
+    },
+    {
+      "source": "service/product-handle.mjs",
+      "target": "contracts/product-handle.mjs",
+      "sourceSHA256": "4c5bf7d36369e2bedb2862e4c741ab9cb1754763557d9a6eb42631d449f99b9e"
+    },
+    {
+      "source": "service/catalogue-order.mjs",
+      "target": "contracts/catalogue-order.mjs",
+      "sourceSHA256": "05022b722e383d20ce7bb7fb771c91d69dc2d7577a3f1b25a2be9e6ba5c9bac2"
+    },
+    {
+      "source": "service/catalogue-sets.mjs",
+      "target": "contracts/catalogue-sets.mjs",
+      "sourceSHA256": "172169b28d83f3bc64b317ccbe36e2c1fdebb7f79c893c1ba3776618c7a5965c"
+    },
+    {
+      "source": "service/app-image-editor.test.mjs",
+      "target": "contracts/app-image-editor.test.mjs",
+      "sourceSHA256": "2ad6b4f5a34ad5bbf633ff4f48fa3be443fa795c7c9fed711a4a619056a063fa"
+    },
+    {
+      "source": "service/app-sets.test.mjs",
+      "target": "contracts/app-sets.test.mjs",
+      "sourceSHA256": "0b6aca4d3b5d91d8005b02adf7aeae57bf402326d02ce869c41630906504f055"
+    },
+    {
+      "source": "service/app-order.test.mjs",
+      "target": "contracts/app-order.test.mjs",
+      "sourceSHA256": "ffeb04ad5d75041c88fb51aef82b0160c50418dd9909337b1308aff74e9a96ad"
+    },
+    {
+      "source": "service/manual-collection.test.mjs",
+      "target": "contracts/manual-collection.test.mjs",
+      "sourceSHA256": "b118c7dd3fa320cabec517eadd5a5fb8f3aa85bdbe67782e0689775df32f2d0d"
+    },
+    {
+      "source": "service/collection-claims.test.mjs",
+      "target": "contracts/collection-claims.test.mjs",
+      "sourceSHA256": "4f1841871fcba8f739af62ba79661096f3496e3d15b9f2b7e940b232e855c795"
+    },
+    {
+      "source": "service/shopify-admin-auth.test.mjs",
+      "target": "contracts/shopify-admin-auth.test.mjs",
+      "sourceSHA256": "4fa1ac7996813789699d52b75e331844444750a8fa5ce99b902fe2274e6e544a"
+    },
+    {
+      "source": "service/qa/fixtures/purchase-proof.jpg",
+      "target": "fixtures/purchase-proof.jpg",
+      "sourceSHA256": "c8c74bf944f9c3e3cc4a6acbf7e830d42a48dd22d07269b23e9d758c8d84b1b9"
+    },
+    {
+      "source": "shopify-image-editor/qa/preview.mjs",
+      "target": "qa/preview.mjs",
+      "sourceSHA256": "2db3151470327c0bb96e5dee50fde4b01aa80b398aceb5d782851f8dc7dd4dae"
+    }
+  ],
+  "adaptations": [
+    "Editor moved to repository root; service helper imports now contracts/",
+    "Package name, self-contained test glob, Node24 and preview command",
+    "Two mobile HTTP router tests excluded from copied suites; all editor cases retained",
+    "Preview reads a standalone synthetic catalogue with synthetic IDs; public Shopify product photos only",
+    "Credentials, .shopify cache, live merchant snapshots, bulk live mutation scripts and production backend excluded",
+    "Editor-flow proof fixture path moved to standalone fixtures/; dependency versions retained; inherited npm audit documented"
+  ],
+  "exportedFiles": [
+    {
+      "path": ".github/workflows/verify.yml",
+      "sha256": "c7ce7ceda98190095facad4feb65e742c0e5365e40999c2324daa188592e9fcc"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "aa39b683c5ddedfff909ca0a027261f4aa27287c40bef37990a784891a73e60b"
+    },
+    {
+      "path": ".nvmrc",
+      "sha256": "7e8a2fa94951112b894a3dbe3d05efef5e9263741fa49125f0a70f40fedab4cc"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "b161aadd08c2faeaec7311c674ec0167036244295d4cc12e73c952a382ad058f"
+    },
+    {
+      "path": "README.md",
+      "sha256": "973527af72cb3daacf18d0224111034e6d86f199cb85eafe3ea8c91bc45fb1a6"
+    },
+    {
+      "path": "assets/shopify-app-icon.png",
+      "sha256": "c91eef16e10579dccee5720905dc3d9d4db8f2ffba27a308be7c85b1446c40ea"
+    },
+    {
+      "path": "assets/shopify-app-icon.svg",
+      "sha256": "686247575f0c658dea79e305c5783fc0501f2f411a162184067e87e61a28b73e"
+    },
+    {
+      "path": "assets/weezy-pop-favicon.png",
+      "sha256": "50d55ba4b41d2751b170d501551700ce98552eb71604661fcd643cfb88743af9"
+    },
+    {
+      "path": "contracts/app-image-editor.mjs",
+      "sha256": "a4e57b674318e285c4e526ae6784e4153bfcf79932cc438c39dbbafb7ef8381f"
+    },
+    {
+      "path": "contracts/app-image-editor.test.mjs",
+      "sha256": "8cc2988a7dd7e2ed393dbca5bd3601d1a83f7b60e763abf0f939c1ff75fa45b4"
+    },
+    {
+      "path": "contracts/app-image-settings.mjs",
+      "sha256": "3538b5a32fd944bfd4afa27295ae36d2f9e13dbca91b7f46742adbd5372fcba4"
+    },
+    {
+      "path": "contracts/app-order.mjs",
+      "sha256": "853a4e5a96fd5b4b51ccc03e9cd97acf944cb4f89e17bbcb35182381fa3595da"
+    },
+    {
+      "path": "contracts/app-order.test.mjs",
+      "sha256": "ffeb04ad5d75041c88fb51aef82b0160c50418dd9909337b1308aff74e9a96ad"
+    },
+    {
+      "path": "contracts/app-sets.mjs",
+      "sha256": "a60fd8a56aca3cf4717410f47dffa0392ac04011810980183cd5bceecc35ef81"
+    },
+    {
+      "path": "contracts/app-sets.test.mjs",
+      "sha256": "0b6aca4d3b5d91d8005b02adf7aeae57bf402326d02ce869c41630906504f055"
+    },
+    {
+      "path": "contracts/catalogue-order.mjs",
+      "sha256": "05022b722e383d20ce7bb7fb771c91d69dc2d7577a3f1b25a2be9e6ba5c9bac2"
+    },
+    {
+      "path": "contracts/catalogue-sets.mjs",
+      "sha256": "172169b28d83f3bc64b317ccbe36e2c1fdebb7f79c893c1ba3776618c7a5965c"
+    },
+    {
+      "path": "contracts/collection-claims.mjs",
+      "sha256": "e8f5a6094ac2325dcede8d9d1a298129128a8eaca8ad0be94afbec8b46f66352"
+    },
+    {
+      "path": "contracts/collection-claims.test.mjs",
+      "sha256": "7e37660098a15912ba14a4ad17f3e24ad4637c0a488b3a0cb693dbe033754eff"
+    },
+    {
+      "path": "contracts/manual-collection.mjs",
+      "sha256": "c5ea89feb45dfe9f3fb9660f2c1e5e6afbd03a95fd097490318990ff44d60a32"
+    },
+    {
+      "path": "contracts/manual-collection.test.mjs",
+      "sha256": "aefc96864237a0d9fe77a26ba7535c99b8789fed4d558043e4413d1e58e70908"
+    },
+    {
+      "path": "contracts/product-handle.mjs",
+      "sha256": "4c5bf7d36369e2bedb2862e4c741ab9cb1754763557d9a6eb42631d449f99b9e"
+    },
+    {
+      "path": "contracts/shopify-admin-auth.mjs",
+      "sha256": "b2ec882d43576d0590a6405a53e36bb5c9d39f545dd9b148816e3dded2a7e761"
+    },
+    {
+      "path": "contracts/shopify-admin-auth.test.mjs",
+      "sha256": "4fa1ac7996813789699d52b75e331844444750a8fa5ce99b902fe2274e6e544a"
+    },
+    {
+      "path": "extensions/app-images/dist/weezy-app-images.js",
+      "sha256": "3adf196823daa6adf6160ac63d9d805870a3c2868c5ed6f3abc08e438d3a2123"
+    },
+    {
+      "path": "extensions/app-images/dist/weezy-app-images.js.map",
+      "sha256": "90e2aff10ea11d04206933df7cb5eda4e4ca2497eb7e385cbee83a48d4572850"
+    },
+    {
+      "path": "extensions/app-images/dist/weezy-app-images.metafile.json",
+      "sha256": "6c8fe994ab2701f73732211fd2f54e88f4a4c25cea587fac97c7887e2d068fb7"
+    },
+    {
+      "path": "extensions/app-images/manifest.json",
+      "sha256": "4cc4bebb6289109da2e00624433ddcca1bac6a4adee906599f3ec1d2932a5efd"
+    },
+    {
+      "path": "extensions/app-images/shopify.extension.toml",
+      "sha256": "1c7734b1faded0910ce93f7b4b7e7c628be90dd62a82e26dab9a4ffd02cf8fad"
+    },
+    {
+      "path": "extensions/app-images/src/Collections.tsx",
+      "sha256": "9fbc50a65b7f5698c26270661d3c45932b34fc316a5b311cec0a255ba914ec75"
+    },
+    {
+      "path": "extensions/app-images/src/Controls.tsx",
+      "sha256": "a292cd4a599057736ce6b74e5eefd68d898f353efa0bccc68731bb2e06a78adf"
+    },
+    {
+      "path": "extensions/app-images/src/EditorTools.tsx",
+      "sha256": "d2de8ee5d9ef8b69f331f638b7ece1cce8bb10c315fee61d3f0a151c4b9be4ed"
+    },
+    {
+      "path": "extensions/app-images/src/FinishPhotos.tsx",
+      "sha256": "3e38836dff7b947c683d6244b5fe4ae8d251086f38b2ad1873ced98a87fb939f"
+    },
+    {
+      "path": "extensions/app-images/src/Home.tsx",
+      "sha256": "f513ddc689af6c962347e165be70bd4cd07f249af4235c7a18ab8042e263700e"
+    },
+    {
+      "path": "extensions/app-images/src/Ordering.tsx",
+      "sha256": "0233257b0bd1db717ad1f17ecb6c88042c4b330ca6854660444fc102f1774b0d"
+    },
+    {
+      "path": "extensions/app-images/src/Overview.tsx",
+      "sha256": "0c5e999c953fb80873caee3c9656e59a992aeddd2853e904a1de4f23aef228e2"
+    },
+    {
+      "path": "extensions/app-images/src/Sets.tsx",
+      "sha256": "2d37a93ffbcafa75f3c6d6bb5b03c47033836f687a71ff5feed2700a7f0a0e5b"
+    },
+    {
+      "path": "extensions/app-images/src/badge-appearance.mjs",
+      "sha256": "11f1572a70069fc36c7775e43fb15bb0827b8199f634f75f3563da029d6aa7d9"
+    },
+    {
+      "path": "extensions/app-images/src/bundled-heroes.json",
+      "sha256": "c4e5f38f7828d6e80d70d5f4c255e254801cf27625d025963fd28b6eeaf655ab"
+    },
+    {
+      "path": "extensions/app-images/src/bundled-numbers.json",
+      "sha256": "ed5a85c0bc6e93f6de08a8908af823a98cdb25d4799b386d65c4931f91f51a70"
+    },
+    {
+      "path": "extensions/app-images/src/bundled-sets.json",
+      "sha256": "abdea2f8b36623f42f722ff0c827cf9309d1c9dc5e38363e7b313b32d44e7c4e"
+    },
+    {
+      "path": "extensions/app-images/src/navigation.mjs",
+      "sha256": "6338113fbdafd6f8cc9175874d904aae037972854b1376115d744478b80612e2"
+    },
+    {
+      "path": "extensions/app-images/src/photo-workflow.mjs",
+      "sha256": "8db8968992fd7439d19295902d812f69cccbe3eb64738e646ef20b59c8678150"
+    },
+    {
+      "path": "extensions/app-images/src/session.mjs",
+      "sha256": "df26187a0cbca69212a18718f7560a9a4bcfcebe82f7a383a9749797d0cc30ce"
+    },
+    {
+      "path": "extensions/app-images/src/set-drafts.mjs",
+      "sha256": "1a328c5bea5529c65b4f65bc78a4e2084f8be9374a29da30e0213a9374686a14"
+    },
+    {
+      "path": "extensions/app-images/src/workflows.mjs",
+      "sha256": "2cdb5d2c77bd14ed1ba8b257f84b7d1a6f426736080d092ca2748b1f074dcfc0"
+    },
+    {
+      "path": "fixtures/catalogue.json",
+      "sha256": "2cd3b227e73867bcb4977a9f76d61eeeb2611fb2b4155571233be4be0ff66340"
+    },
+    {
+      "path": "fixtures/purchase-proof.jpg",
+      "sha256": "c8c74bf944f9c3e3cc4a6acbf7e830d42a48dd22d07269b23e9d758c8d84b1b9"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "f2fbf70c5573ac8de9fc9dc350375c5d29f0be92deac83746482377a3bfdc9b8"
+    },
+    {
+      "path": "package.json",
+      "sha256": "1e64f58e91fdaad8bbc7e114b3b18c3593152be722fd9d99685dd2fdaacdca47"
+    },
+    {
+      "path": "qa/preview.mjs",
+      "sha256": "a30decb16909c9c48bbcb4cf04946bc9e2eea9a5039e70d9d12944a3facb92fa"
+    },
+    {
+      "path": "scripts/check-contracts.mjs",
+      "sha256": "aa6b5913976cde4237f12da8fd83b93068e79587bd86c0a16f7ab5f095950c09"
+    },
+    {
+      "path": "shopify.app.toml",
+      "sha256": "0e0957ebeea434a382986f9e1e3c059cbfb29697b35dbf97f8d016b124bde252"
+    },
+    {
+      "path": "tests/controls.test.mjs",
+      "sha256": "3611dc1c4bff401eff77484bf5b2bdd1d9654e32cf2c77dfd5b86609aa75cf8f"
+    },
+    {
+      "path": "tests/editor-flow.test.mjs",
+      "sha256": "40d2f8bf3ddd9239929eeba1024857ea9f9804694e4e2c48527794f66f5bd488"
+    },
+    {
+      "path": "tests/photo-workflow.test.mjs",
+      "sha256": "ba89bec57fc7735fe6e4285e3a78ab9f0e46beb01132f8608fc9c3080dfe4d18"
+    },
+    {
+      "path": "tests/set-handle-drafts.test.mjs",
+      "sha256": "301b9e5d8282dfa60761d57b1a7dd12ebdd76ccf7c73fcde5b6c889283add8db"
+    },
+    {
+      "path": "tests/workflows.test.mjs",
+      "sha256": "f739ff628de3d1ec5076d55472534d1bf4ea1600d1cb44c5010cdca73f25f052"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "ae924b0d74048a3787c4fd135e2c08137594dfc78388037a8f0ffebefe800c0d"
+    }
+  ]
+}
