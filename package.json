@@ -19,7 +19,7 @@
     "@remote-dom/polyfill": "^1.5.1",
     "@shopify/cli": "4.8.0",
     "esbuild": "^0.28.2",
-    "typescript": "~5.9.3"
+    "typescript": "~7.0.2"
   },
   "dependencies": {
     "@preact/signals": "^2.11.2",
