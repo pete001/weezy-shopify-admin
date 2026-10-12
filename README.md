@@ -18,6 +18,8 @@ npm run preview
 
 The preview opens at **http://127.0.0.1:48295**. Its changes are in memory and reset when restarted. It uses the actual editor components and public Shopify product photos with synthetic product/customer IDs. Shopify's Polaris script needs internet access. `npm run dev` is different: it uses authenticated Shopify development tooling and requires an explicitly selected test store.
 
+**Pull requests:** every change to `main` goes through a PR, merged by squash once the `editor` check (`npm run verify` in CI) is green; GitHub enforces both. Dependabot opens weekly update PRs for npm and GitHub Actions. Merging never deploys: releasing the editor to Shopify is a separate `npm run deploy` that needs the owner's go-ahead (see [deployment](docs/DEPLOYMENT.md)).
+
 ## What the editor manages
 
 | Section | Staff task |
