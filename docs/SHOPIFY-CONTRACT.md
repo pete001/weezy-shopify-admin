@@ -1,6 +1,6 @@
 # Shopify contract and ownership
 
-The editor and mobile reader are separate source projects connected through Shopify. Editing UI code here does not require a mobile build. Changing a persisted contract may require coordinated service/native work.
+This repository defines the `charm_club` metafields. The App Editor writes them; the app service and iPhone app in pete001/weezy-app read them. They meet only through Shopify. Editing UI code here needs no app build; changing a persisted field changes the contract below.
 
 | Owner and field | App-only purpose | Modules |
 |---|---|---|
@@ -19,22 +19,27 @@ Set membership is not a purchase or badge grant. Repeated members use quantity m
 
 Approval and manual-grant flows must validate the customer's Shopify identity and exact product/variant, then perform concurrency-protected writes and read them back. Approval atomically updates claims, pending count and grants. Pending/rejected/withdrawn claims do not create ownership; reviewed evidence is removed as the contract specifies. No order/payment/stock mutation is part of approval. Do not expose private photo proof or staff/receipt details in public projections.
 
-## Compatibility snapshot
+## The contract lives here
 
-The10 copied production modules preserve their original bytes. They live here to let the editor build and its direct metadata tests run independently. `catalogue-order.mjs` and `catalogue-sets.mjs` are included for reader regression assertions; they do not start or deploy a server. The auth provider is exercised with injected test responses and supplies no embedded token.
+The modules in `contracts/` are the executable definition of these fields. They are owned here, not copied from another project: weezy-app's app service takes its copy of the readers and validators from this repository. `catalogue-order.mjs` and `catalogue-sets.mjs` are the reader side, kept so the tests prove that what the editor writes is what the app reads. The auth provider is exercised with injected test responses and supplies no embedded token.
 
-To compare with a separately available mobile checkout:
+To change a field: update the module and its tests here, keep version 1 records readable, record the change below, then ship the matching reader in weezy-app before deploying this editor.
 
-```sh
-npm run check-contracts -- /path/to/weezy-ios
-```
+## App service endpoints the editor reads
 
-This command reads files only, records missing/different module hashes and exits nonzero on drift. It is an optional compatibility aid, not a dependency of the independent build or a proof that differently implemented code is incompatible. Review intentional differences and add shared serialized fixtures when changing a schema.
+`extensions/app-images/src/app-service.mjs` holds the app service's address (today the existing reader; the new weezy-app service on its own Fly app replaces it). The editor reads two public endpoints, without credentials:
 
-## Ownership after extraction
+| Endpoint | Used for | Shape |
+|---|---|---|
+| `GET /v1/catalogue/sync` | The "Ready for the app to refresh · Last successful app sync" status on every editor page | sync state read by `syncState()` in `workflows.mjs` |
+| `GET /v1/set-checkout-status` | Curated sets: the app special can only be switched on when checkout confirms it | `{"ready": true}` |
 
-- This repository: editor UI, staff workflows, extension packaging and editor-side metafield validation.
-- `pete001/weezy-ios`: native app, production service readers/HTTP routes, checkout, account authentication, web sharing, notifications and service deployment.
+Any replacement service must serve both before `APP_SERVICE_URL` points at it.
+
+## Ownership
+
+- This repository: editor UI, staff workflows, extension packaging, and the metafield contract.
+- `pete001/weezy-app`: the design system, the iPhone app, its app service (readers, HTTP routes, checkout, account authentication, web sharing, notifications) and that service's Fly deployment.
 - Shopify: published catalogue/variants/prices/availability, customer identity, app-only metadata and hosted checkout.
 
-The old mobile-repo editor remains frozen for compatibility tests/historical evidence. Do future admin work here. Do not silently synchronize two active editors or deploy the frozen one. Schema changes require coordinated work; UI-only changes can ship independently through an authorized editor release.
+Do future admin work here. Schema changes need the matching weezy-app change; UI-only changes can ship independently through an authorized editor release.

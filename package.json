@@ -13,8 +13,7 @@
     "test": "node --test tests/*.test.mjs contracts/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "node qa/preview.mjs",
-    "verify": "npm test && npm run typecheck && npm run build",
-    "check-contracts": "node scripts/check-contracts.mjs"
+    "verify": "npm test && npm run typecheck && npm run build"
   },
   "devDependencies": {
     "@remote-dom/polyfill": "^1.5.1",

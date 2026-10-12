@@ -25,15 +25,15 @@ These identifiers are public configuration, not passwords. No secrets are needed
 ## Authorized release only
 
 1. Run all local/CI checks and inspect the affected workflow with synthetic data.
-2. Compare shared contracts with the production reader. Changes to shape/semantics need a separately reviewed reader release, deployed first when necessary.
+2. If `contracts/` changed shape or meaning, the matching reader change in weezy-app must be released first.
 3. Obtain explicit deployment authorization. A request to push repository code does not authorize a Shopify deployment.
-4. Confirm `shopify.app.toml` points to the App Editor, not the separate weezy ios service app. Keep scopes/UID intact.
+4. Confirm `shopify.app.toml` points to the App Editor (client ID above), not any other app. Keep scopes/UID intact. If `app-service.mjs` changed, confirm the new service answers both endpoints in docs/SHOPIFY-CONTRACT.md.
 5. Run `npm run deploy` and record the actual accepted Shopify version. Review the proposed change before accepting any unexpected permissions or identity change.
 6. Reopen the existing staff app and check reads/navigation. Any live save must have separate merchant/customer authorization and a planned verification/restore.
-7. Verify the reader projection and app refresh when relevant; do not infer a native release from an editor deploy.
+7. Verify the app service picks up the change (the sync status in the editor) and the app refreshes; an editor deploy never releases the iPhone app.
 
-This extraction did not deploy anything. The production Fly machine, volume, credentials and installed native build were not changed.
+The editor itself runs inside Shopify; there is no server to deploy from this repository. The app service it reads status from is deployed from weezy-app.
 
 ## CI
 
-The public workflow runs install, tests, typecheck and production build on a clean hosted runner with read-only source access. It has no deploy step, Shopify/Fly token or mobile signing key. Keep it safe for public pull requests.
+The public workflow runs install, tests, typecheck and production build on a clean hosted runner with read-only source access. It has no deploy step, Shopify/Fly token or signing key. Keep it safe for public pull requests.
