@@ -1,0 +1,18 @@
+# Weekly update PRs. Each runs the editor check like any other PR and merges by squash once green.
+# Merging never deploys the editor; releasing to Shopify stays a separate, approved step.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
