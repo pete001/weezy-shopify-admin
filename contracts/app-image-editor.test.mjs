@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createImageEditor} from './app-image-editor.mjs';
-import {productImages,appVariantImageURLs} from './app-image-settings.mjs';
+import {productImages,appVariantImageURLs,readAppListing} from './app-image-settings.mjs';
 import {createEditorSession} from '../extensions/app-images/src/session.mjs';
 const img=n=>({id:`gid://shopify/MediaImage/${n}`,image:{url:`https://cdn.shopify.com/s/files/1/photo${n}.jpg`,altText:`Photo ${n}`}});
 const fixture=()=>({id:'gid://shopify/Product/123',title:'Charm',handle:'charm',status:'ACTIVE',publishedAt:'2026-01-01',media:{nodes:[img(1),img(2),img(3)],pageInfo:{hasNextPage:false}},appImages:null});
@@ -112,4 +112,26 @@ test('finish photo reads expose exact trusted Shopify variant photos without cha
  const p=fixture();p.variants={nodes:[{id:'gid://shopify/ProductVariant/1',title:'Gold',image:{url:'https://cdn.shopify.com/s/files/1/gold.jpg'}},{id:'gid://shopify/ProductVariant/2',title:'Silver',image:{url:'https://untrusted.invalid/silver.jpg'}}],pageInfo:{hasNextPage:false}};
  const queries=[];const api=createImageEditor({request:async q=>{queries.push(q);return {data:{product:p}};}});
  const loaded=await api.get('123');assert.equal(loaded.variants[0].imageURL,p.variants.nodes[0].image.url);assert.equal(loaded.variants[1].imageURL,null);assert.ok(queries.every(q=>q.startsWith('query')&&q.includes('image{url}')));
+});
+test('an optional charm cut-out saves as a Shopify Files PNG link, survives other edits and can be removed',async()=>{
+ const h=harness(),website=JSON.stringify(h.product.media),png='https://cdn.shopify.com/s/files/1/0904/files/moon-cutout.png?v=1791284515';
+ let p=await h.api.get('123');assert.equal(p.cutoutImageURL,null);
+ for(const bad of ['http://cdn.shopify.com/s/files/1/moon.png','https://example.com/s/files/1/moon.png','https://cdn.shopify.com/s/files/1/moon.jpg','https://cdn.shopify.com/other/moon.png',42]){
+  const writes=h.calls.filter(c=>c.query.startsWith('mutation')).length;
+  await assert.rejects(h.api.save('123',{...p,cutoutImageURL:bad}),{status:400});
+  assert.equal(h.calls.filter(c=>c.query.startsWith('mutation')).length,writes);
+ }
+ p=await h.api.save('123',{...p,cutoutImageURL:`  ${png} `});assert.equal(p.cutoutImageURL,png);
+ assert.equal(JSON.parse(h.product.appImages.value).appCutout,png);assert.equal(readAppListing(h.product.appImages).cutoutImageURL,png);
+ p.images[1].hidden=true;p=await h.api.save('123',p);assert.equal(p.cutoutImageURL,png);
+ const {cutoutImageURL:_,...withoutField}=p;p=await h.api.save('123',{...withoutField,appCategory:'earrings'});assert.equal(p.cutoutImageURL,png);
+ p=await h.api.save('123',{...p,cutoutImageURL:null});assert.equal(p.cutoutImageURL,null);assert.equal('appCutout' in JSON.parse(h.product.appImages.value),false);
+ assert.equal(JSON.stringify(h.product.media),website);
+ assert.doesNotMatch(h.calls.map(x=>x.query).join('\n'),/fileCreate|stagedUploadsCreate|productCreateMedia|productUpdate/);
+});
+test('version 1 records without a cut-out stay readable and a malformed stored cut-out fails closed',()=>{
+ const field=value=>({type:'json',value:JSON.stringify({version:1,images:[],...value})});
+ assert.equal(readAppListing(field({})).cutoutImageURL,null);assert.equal(readAppListing(null).cutoutImageURL,null);
+ assert.equal(readAppListing(field({appCutout:'https://cdn.shopify.com/s/files/1/moon.WEBP'})).cutoutImageURL,'https://cdn.shopify.com/s/files/1/moon.WEBP');
+ for(const appCutout of ['https://cdn.shopify.com/s/files/1/moon.gif',' https://cdn.shopify.com/s/files/1/moon.png','javascript:alert(1)',{url:'x'}])assert.throws(()=>readAppListing(field({appCutout})),/cutout/);
 });

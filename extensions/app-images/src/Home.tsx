@@ -6,6 +6,7 @@ import {render} from 'preact';
 import {Sets} from './Sets';
 import {finishPhoto} from './photo-workflow.mjs';
 import {FinishPhotos} from './FinishPhotos';
+import {Cutout} from './Cutout';
 import {Overview,areas,type Area,tasks} from './Overview';
 import {Collections} from './Collections';
 import {Ordering} from './Ordering';
@@ -20,8 +21,8 @@ import bundled from './bundled-heroes.json';
 import {createEditorSession} from './session.mjs';
 
 type Photo = {id:string;url:string;alt:string;hidden:boolean};
-type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string};
-type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string};
+type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string;cutoutImageURL?:string|null};
+type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null};
 type State = {product:Product|null;status:string;error:string|null;notice:string|null};
 const api=createImageEditor({bundled,request:(query:string,variables:Record<string,unknown>)=>shopify.query(query,{variables})});
 const session=createEditorSession(api);
@@ -43,8 +44,8 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   const [state,setState]=useState<State>(session.snapshot());
   const [items,setItems]=useState<Item[]>([]),[search,setSearch]=useState(''),[unreviewed,setUnreviewed]=useState(false);
   const [loading,setLoading]=useState(true),[listError,setListError]=useState(''),[opening,setOpening]=useState(false);
-  const [finishDirty,setFinishDirty]=useState(false),[story,setStory]=useState(()=>state.product?.appStory??''),[storyDirty,setStoryDirty]=useState(false),[hideCandidate,setHideCandidate]=useState<string|null>(null);
-  const draft=finishDirty||storyDirty||!!hideCandidate;
+  const [finishDirty,setFinishDirty]=useState(false),[cutoutDirty,setCutoutDirty]=useState(false),[story,setStory]=useState(()=>state.product?.appStory??''),[storyDirty,setStoryDirty]=useState(false),[hideCandidate,setHideCandidate]=useState<string|null>(null);
+  const draft=finishDirty||cutoutDirty||storyDirty||!!hideCandidate;
   const [previous,setPrevious]=useState<Photo[]|null>(null),[listPage,setListPage]=useState(0);
   const [visibility,setVisibility]=useState('all'),[category,setCategory]=useState(mode==='stories'?'charms':'all');
   const [selectedIDs,setSelectedIDs]=useState<string[]>([]),[bulkVisibility,setBulkVisibility]=useState('keep'),[bulkCategory,setBulkCategory]=useState('keep');
@@ -64,7 +65,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   useEffect(()=>session.subscribe(setState),[]);
   onBlocked(navigateBlocked);
   useEffect(()=>{void loadList();},[]);
-  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory]);
+  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory,cutoutImageURL:product.cutoutImageURL}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory,product?.cutoutImageURL]);
   async function loadList(){
     setLoading(true);setListError('');
     try {
@@ -133,7 +134,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         {visibleItems.map(item=><s-stack key={item.id} gap="small">{mode==='catalogue'?<Checkbox label={`Select ${item.title}`} checked={selectedIDs.includes(item.id)} disabled={navigateBlocked} onChange={e=>setSelectedIDs(old=>e.currentTarget.checked?[...old.filter(id=>id!==item.id),item.id]:old.filter(id=>id!==item.id))}/>:null}<Clickable key={item.id} padding="small" border="base" borderRadius="base" background={item.id===product?.id?'strong':'base'} disabled={navigateBlocked} onClick={()=>open(item.id)} accessibilityLabel={`Open ${item.title}${item.reviewed?', reviewed':''}`}>
           <s-grid gridTemplateColumns="40px 1fr" gap="small" alignItems="center">
             {item.imageURL?<s-thumbnail src={item.imageURL} alt="" size="small"/>:<s-box/>}
-            <s-stack gap="small-200"><s-text type="strong">{item.title}</s-text><s-text color="subdued">{categoryLabels[item.appCategory as keyof typeof categoryLabels]} · {item.appHidden?'Hidden from app':mode==='images'?(item.reviewed?'Reviewed':'Needs review'):'Visible in app'}</s-text></s-stack>
+            <s-stack gap="small-200"><s-text type="strong">{item.title}</s-text><s-text color="subdued">{categoryLabels[item.appCategory as keyof typeof categoryLabels]} · {item.appHidden?'Hidden from app':mode==='images'?(item.reviewed?'Reviewed':'Needs review'):'Visible in app'}{mode==='images'&&item.cutoutImageURL?' · Cut-out':''}</s-text></s-stack>
           </s-grid>
         </Clickable></s-stack>)}
         {matching.length>8?<s-stack direction="inline" gap="small" alignItems="center">
@@ -195,6 +196,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         <SyncStatus kind="products" handle={product.handle} digest={product.digest} dirty={state.status==='saving'||!!state.error||draft}/>
         {mode==='images'?<>
         <ProductPreview product={product}/>
+        <Cutout key={product.id} product={product} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}}/>
         <s-paragraph>Click a photo to preview it. Use the labelled buttons to show, hide or reorder it. The first visible photo is the app cover.</s-paragraph>
         {state.notice?<s-banner tone="warning">{state.notice}</s-banner>:null}
         {!product.images.length?<s-banner tone="warning">This product has no images to review.</s-banner>:null}
