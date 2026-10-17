@@ -16,7 +16,7 @@ export function createEditorSession(api, {delay=350}={}) {
         try {
           const confirmed=await api.save(product.id,product);
           saved=current;
-          set({product:{...confirmed,images:current===version?confirmed.images:state.product.images,appHidden:current===version?confirmed.appHidden:state.product.appHidden,appCategory:current===version?confirmed.appCategory:state.product.appCategory,appStory:current===version?confirmed.appStory:state.product.appStory,appVariantImages:current===version?confirmed.appVariantImages:state.product.appVariantImages},status:current===version?'saved':'saving'});
+          set({product:{...confirmed,images:current===version?confirmed.images:state.product.images,appHidden:current===version?confirmed.appHidden:state.product.appHidden,appCategory:current===version?confirmed.appCategory:state.product.appCategory,appStory:current===version?confirmed.appStory:state.product.appStory,appVariantImages:current===version?confirmed.appVariantImages:state.product.appVariantImages,cutoutImageURL:current===version?confirmed.cutoutImageURL:state.product.cutoutImageURL},status:current===version?'saved':'saving'});
         }catch(error){set({status:'error',error:error.message});return false;}
       }
       return true;

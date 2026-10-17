@@ -280,3 +280,21 @@ test('badge appearance offers pictured set members, validates custom colour and 
  await until(()=>[...storage.values()].some(d=>d.sets?.[0]?.member_handles.length===2&&!d.sets[0].badge_hero_handle));assert.equal(writes,afterFallback,'Removing the hero remains an explicit unsaved draft');
  click('s-button','Discard unsaved changes');await until(()=>!text().includes('Unsaved changes'));assert.equal(JSON.parse(shop.appSets.value).sets[0].member_handles.length,3);
 });
+test('the charm cut-out is a draft until saved, previews the link and stores only app metadata',async()=>{
+ await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
+ await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Charm cut-out for the set chain'));
+ const field=()=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')==='Cut-out link from Shopify Files');
+ const media=JSON.stringify(products[1].media),before=writes;
+ field().value='https://example.com/beta.png';field().dispatchEvent(new Event('input'));
+ await until(()=>!!field().getAttribute('error'));assert.ok(by('s-button','Save cut-out').getAttribute('disabled')!=null);assert.equal(writes,before);
+ const png='https://cdn.shopify.com/s/files/1/0904/files/beta-cutout.png?v=1';
+ field().value=png;field().dispatchEvent(new Event('input'));
+ await until(()=>text().includes('Unsaved cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png));
+ assert.equal(writes,before);assert.equal(await go('/order'),false);
+ click('s-button','Save cut-out');await until(()=>text().includes('Cut-out saved')&&JSON.parse(products[1].appImages.value).appCutout===png);
+ assert.ok(text().includes('Beta')&&text().includes(' · Cut-out'));
+ click('s-button','Remove cut-out');await until(()=>text().includes('Unsaved cut-out'));click('s-button','Save · use the cover photo');
+ await until(()=>text().includes('Using the cover photo')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
+ assert.equal(JSON.stringify(products[1].media),media);
+});
