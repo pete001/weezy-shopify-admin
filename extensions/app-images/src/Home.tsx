@@ -9,6 +9,7 @@ import {FinishPhotos} from './FinishPhotos';
 import {Cutout} from './Cutout';
 import {Overview,areas,type Area,tasks,Progress} from './Overview';
 import {productTodos,todoFilter,todoProgress} from './todos.mjs';
+import {appServiceURL} from './app-service.mjs';
 import {Collections} from './Collections';
 import {Ordering} from './Ordering';
 import {ProductPreview,SyncStatus} from './EditorTools';
@@ -50,15 +51,19 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   const [previous,setPrevious]=useState<Photo[]|null>(null),[listPage,setListPage]=useState(0);
   const [visibility,setVisibility]=useState('all'),[category,setCategory]=useState(mode==='stories'?'charms':'all');
   // Opened from the start page's To do: just what's left of that to-do (?todo=cutout, story or review).
-  const [todo,setTodo]=useState<string|null>(()=>{const kind=new URL(window.location?.href??'https://app.invalid').searchParams.get('todo');return kind&&(productTodos as any)[kind]?.area===mode?kind:null;});
+  const [todo,setTodo]=useState<string|null>(()=>{const kind=new URL(window.location?.href??'https://app.invalid').searchParams.get('todo');return kind&&((productTodos as any)[kind]?.area===mode||(kind==='finish'&&mode==='finishes'))?kind:null;});
+  // Finish photos to do: the products the service found without a photo for a finish, less any fixed here since.
+  const [finishCheck,setFinishCheck]=useState<any>(null),[fixed,setFixed]=useState<string[]>([]);
+  useEffect(()=>{if(todo==='finish')void fetch(appServiceURL('/v1/catalogue/finish-photos')).then(r=>r.ok?r.json():null).catch(()=>null).then(setFinishCheck);},[todo]);
   const [selectedIDs,setSelectedIDs]=useState<string[]>([]),[bulkVisibility,setBulkVisibility]=useState('keep'),[bulkCategory,setBulkCategory]=useState('keep');
   const [bulkReviewPage,setBulkReviewPage]=useState(0);
   const [bulkBusy,setBulkBusy]=useState(false),[bulkPlan,setBulkPlan]=useState<any>(null),[bulkError,setBulkError]=useState(''),[bulkResult,setBulkResult]=useState<any>(null),[bulkProgress,setBulkProgress]=useState('');
   const product=state.product;
   const blocked=opening||state.status==='loading'||!!state.error||bulkBusy||!!bulkPlan;
   const navigateBlocked=blocked||state.status==='saving'||draft;
-  const matching:Item[]=filterProducts(items,{search,visibility,category,unreviewed}).filter(todo?todoFilter(todo):()=>true);
-  const progress=todo?todoProgress(todo,items):null;
+  const needing:any[]=(finishCheck?.needing??[]).filter((p:any)=>!fixed.includes(p.id));
+  const matching:Item[]=filterProducts(items,{search,visibility,category,unreviewed}).filter(todo==='finish'?(p:Item)=>needing.some(n=>n.id===p.id):todo?todoFilter(todo):()=>true);
+  const progress=todo==='finish'?(finishCheck?{done:finishCheck.finishes-needing.reduce((n:number,p:any)=>n+p.missing.length,0),total:finishCheck.finishes,left:needing}:null):todo?todoProgress(todo,items):null;
   const index=matching.findIndex(p=>p.id===product?.id);
   const page=Math.min(listPage,Math.max(0,Math.ceil(matching.length/8)-1));
   const visibleItems=matching.slice(page*8,page*8+8);
@@ -67,6 +72,10 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   useEffect(()=>{if(lastProduct.current!==product?.id){lastProduct.current=product?.id;setHideCandidate(null);setStory(product?.appStory??'');setStoryDirty(false);}},[product?.id]);
   useEffect(()=>{if(index>=0)setListPage(Math.floor(index/8));},[product?.id]);
   useEffect(()=>session.subscribe(setState),[]);
+  // Once the check is in, start on the first product that needs a finish photo.
+  useEffect(()=>{if(todo==='finish'&&finishCheck&&needing.length&&!needing.some(n=>n.id===product?.id)&&!navigateBlocked)void open(needing[0].id);},[finishCheck,navigateBlocked,items.length]);
+  // A product whose finishes all have a photo now leaves the finish photos to do at once.
+  useEffect(()=>{if(todo==='finish'&&product&&product.variants.length&&product.variants.every(v=>finishPhoto(product,v).url))setFixed(old=>old.includes(product.id)?old:[...old,product.id]);},[todo,product]);
   onBlocked(navigateBlocked);
   useEffect(()=>{void loadList();},[]);
   useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory,cutoutImageURL:product.cutoutImageURL,appStory:product.appStory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory,product?.cutoutImageURL,product?.appStory]);
@@ -128,9 +137,10 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
     <s-section key="product-list" slot="aside" heading="Products">
       <s-stack gap="base">
         {todo&&progress?<s-box padding="base" border="base" borderRadius="base"><s-stack gap="small">
-          <s-text type="strong">To do: {(productTodos as any)[todo].label}</s-text>
+          <s-text type="strong">To do: {todo==='finish'?'finishes that need a photo':(productTodos as any)[todo].label}</s-text>
           <Progress done={progress.done} total={progress.total}/>
-          <s-text>{progress.left.length?`${progress.left.length} left`:'All done. Every one is sorted.'}</s-text>
+          <s-text>{progress.left.length?`${progress.left.length} ${todo==='finish'?(progress.left.length===1?'product':'products'):''} left`.replace('  ',' '):'All done. Every one is sorted.'}</s-text>
+          {todo==='finish'?<s-text color="subdued">The list is checked every 30 minutes; a product you’ve matched here leaves it straight away.</s-text>:null}
           <s-stack direction="inline" gap="small"><Button href="/" disabled={navigateBlocked}>Back to To do</Button><Button disabled={navigateBlocked} onClick={()=>setTodo(null)}>Show every product</Button></s-stack>
         </s-stack></s-box>:null}
         <SearchField label="Find a product" placeholder="Search products" disabled={navigateBlocked} value={search} onInput={event=>setSearch(event.currentTarget.value)}/>
