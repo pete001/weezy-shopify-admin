@@ -12,6 +12,15 @@ export const productTodos={
 
 export const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
 
+// When the service last checked, as staff would say it: "just now", "12 minutes ago", "at 09:40".
+export function checked(iso,now=Date.now()){
+ const minutes=Math.round((now-Date.parse(iso))/60000);
+ if(!(minutes>=0))return 'recently';
+ if(minutes<2)return 'just now';
+ if(minutes<60)return `${minutes} minutes ago`;
+ return `at ${new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
+}
+
 // How far a product to-do has come: how many it covers, how many are done and which are left.
 export function todoProgress(kind,products){
  const todo=productTodos[kind];
@@ -28,9 +37,9 @@ export function todoFilter(kind){
 
 // Every to-do, most urgent first: customers waiting, then sets that won't show, then the catalogue's gaps.
 // `pending` is the number of purchases customers registered and are waiting on. Anything not loaded yet is null.
-/** @param {{products?:any[]|null,sets?:any[]|null,pending?:number|null}} [input]
+/** @param {{products?:any[]|null,sets?:any[]|null,pending?:number|null,finishes?:any}} [input]
  * @returns {{id:string,href:string,total:number|null,done:number|null,count:number,title:string,why:string,action:string}[]} */
-export function buildTodos({products=null,sets=null,pending=null}={}){
+export function buildTodos({products=null,sets=null,pending=null,finishes=null}={}){
  const list=[];
  if(pending!=null)list.push({id:'purchases',href:'/registrations',total:null,done:null,count:pending,
   title:pending?`${plural(pending,'purchase','purchases')} waiting for review`:'No purchases waiting',
@@ -42,6 +51,14 @@ export function buildTodos({products=null,sets=null,pending=null}={}){
    title:stuck.length?`${plural(stuck.length,'set needs','sets need')} attention`:'Every set is ready',
    why:stuck.length?`${stuck.map(s=>s.name).join(', ')}: a piece is hidden, gone from the website or the set has fewer than 3 pieces, so customers can’t complete it.`:'Every switched-on set shows in the app with all its pieces.',
    action:'Fix sets'});
+ }
+ // Finish photos come from the app service's check (every 30 minutes): every product's finishes is too many queries here.
+ if(finishes!=null){
+  const left=finishes.missing??0;
+  list.push({id:'finishes',href:'/finishes?todo=finish',total:finishes.finishes??0,done:(finishes.finishes??0)-left,count:left,
+   title:left?`${plural(left,'finish needs','finishes need')} a photo`:'Every finish has its photo',
+   why:`When a customer picks a finish, the app shows its photo. Without one they see no photo for it.${finishes.checkedAt?` Checked ${checked(finishes.checkedAt)}.`:''}`,
+   action:'Match finish photos'});
  }
  if(products!=null){
   const words={cutout:['charm needs a cut-out','charms need a cut-out','Every charm has a cut-out','The set chain, the share pictures and the moment after buying use it. Without one the app shows the photo.','Add cut-outs'],

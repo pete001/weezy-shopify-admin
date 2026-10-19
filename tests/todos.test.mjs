@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildTodos,todoProgress,todoFilter} from '../extensions/app-images/src/todos.mjs';
+import {buildTodos,todoProgress,todoFilter,checked} from '../extensions/app-images/src/todos.mjs';
 
 const charm=(id,extra={})=>({id,handle:id,title:id,reviewed:true,appHidden:false,appCategory:'charms',cutoutImageURL:null,appStory:null,...extra});
 const products=[
@@ -34,6 +34,15 @@ test('the To do list puts waiting customers first, links each to its filtered li
  const done=buildTodos({products:[charm('a',{cutoutImageURL:'x',appStory:'y'})],sets:[],pending:0});
  assert.deepEqual(done.map(t=>[t.id,t.count]),[['purchases',0],['sets',0],['cutout',0],['story',0],['review',0]]);
  assert.equal(done[2].title,'Every charm has a cut-out');
+});
+
+test('finish photos come from the service check, with its progress and when it ran', () => {
+ const now=Date.parse('2026-10-19T10:00:00Z');
+ const [card]=buildTodos({finishes:{checkedAt:'2026-10-19T09:48:00Z',finishes:40,missing:7,needing:[]}});
+ assert.equal(card.id,'finishes');assert.equal(card.title,'7 finishes need a photo');
+ assert.equal(card.href,'/finishes?todo=finish');assert.equal(card.done,33);assert.equal(card.total,40);
+ assert.equal(checked('2026-10-19T09:48:00Z',now),'12 minutes ago');assert.equal(checked('2026-10-19T09:59:30Z',now),'just now');
+ assert.equal(buildTodos({finishes:{finishes:5,missing:0}})[0].title,'Every finish has its photo');
 });
 
 test('nothing loaded yet means nothing to show', () => {
