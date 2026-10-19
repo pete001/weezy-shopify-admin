@@ -249,9 +249,14 @@ test('customer name search shows exact account email before any ownership write'
 });
 
 test('start page explains each independent task and links to all eight workflows without writes',async()=>{
- await go('/');await until(()=>text().includes('What would you like to do?')||nodes().some(n=>n.getAttribute?.('heading')==='What would you like to do?'));
+ await go('/');await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools'));
  const before=writes;for(const area of ['images','finishes','stories','catalogue','sets','order','registrations','collections'])assert.ok(nodes().some(n=>n.localName==='s-button'&&n.getAttribute('href')===`/${area}`),area);
  assert.ok(text().includes('Product titles, prices, stock'));assert.equal(writes,before);
+ // To do: what's left, each linking to its list filtered to just those, read-only.
+ await until(()=>text().includes('things to do')||text().includes('thing to do'));
+ assert.ok(nodes().some(n=>n.getAttribute?.('heading')==='To do'));
+ assert.ok(nodes().some(n=>n.localName==='s-button'&&n.getAttribute('href')==='/catalogue?todo=review'),'products to check link to the filtered catalogue');
+ assert.ok(text().includes('of 4 done'));assert.equal(writes,before);
 });
 
 test('hiding a photo used for a finish needs confirmation and cancelling preserves its assignment',async()=>{
@@ -272,7 +277,7 @@ test('badge appearance offers pictured set members, validates custom colour and 
  field.value='#FAB7EB';field.dispatchEvent(new Event('input'));await until(()=>!text().includes('Check Badge appearance'));
  click('s-button','Save sets to Shopify');await until(()=>text().includes('Saved to Shopify'));
  const authored=JSON.parse(shop.appSets.value).sets[0];assert.equal(authored.badge_color,'#FAB7EB');assert.equal(authored.badge_hero_handle,'alpha');assert.equal(JSON.stringify(products),media,'No product or website photos were changed');
- await go('/');await until(()=>text().includes('What would you like to do?')||nodes().some(n=>n.getAttribute?.('heading')==='What would you like to do?'));
+ await go('/');await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools'));
  await go('/sets');await until(()=>!!by('s-button','5. Badge appearance'));click('s-button','5. Badge appearance');await until(()=>text().includes('Selected badge charm'));
  click('s-button','Use default lilac');await until(()=>nodes().some(n=>n.localName==='s-color-field'&&n.getAttribute('label')==='Default badge colour'));click('s-clickable','Use numeral only for badge');await until(()=>!text().includes('Selected badge charm'));click('s-button','Save sets to Shopify');await until(()=>text().includes('Saved to Shopify'));
  assert.equal(JSON.parse(shop.appSets.value).sets[0].badge_color,undefined);assert.equal(JSON.parse(shop.appSets.value).sets[0].badge_hero_handle,undefined);
@@ -298,3 +303,15 @@ test('the charm cut-out is a draft until saved, previews the link and stores onl
  await until(()=>text().includes('Using the cover photo')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
  assert.equal(JSON.stringify(products[1].media),media);
 });
+test('a to-do opens its list filtered to just what is left, with its progress and a way back to every product',async()=>{
+ // one product without app settings yet, as a new product would be
+ const saved=products[2].appImages;products[2].appImages=null;
+ await go('/catalogue?todo=review');await until(()=>text().includes('To do: products to check for the app')&&Number(text().match(/\d+ of (\d+) done/)?.[1])>0);
+ const [,done,total]=text().match(/(\d+) of (\d+) done/).map(Number),left=total-done;
+ assert.ok(left>0,'the fixture has products still to check');
+ assert.ok(text().includes(`${left} left`));assert.ok(text().includes(`${left} matching products`),'the list shows just what is left');
+ click('s-button','Show every product');await until(()=>!text().includes('To do: products to check'));
+ assert.ok(Number(text().match(/(\d+) matching products/)[1])>left,'every product is back');
+ products[2].appImages=saved;
+});
+

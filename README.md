@@ -24,7 +24,7 @@ The preview opens at **http://127.0.0.1:48295**. Its changes are in memory and r
 
 | Section | Staff task |
 |---|---|
-| Start here | Choose the right tool and see outstanding app tasks |
+| Start here | To do: what needs doing, counted from Shopify (purchases waiting, sets that need attention, charms without a cut-out or story, products to check), each opening its list filtered to what's left with its progress; then every tool |
 | Product photos | Choose the app cover, order and hide photos without changing the website gallery; add the charm's transparent cut-out (a Shopify Files link) for the set chain |
 | Match finish photos | Match exact Shopify variants to visible photos using image previews |
 | Charm stories | Write compact app-only copy, retaining the website description |
