@@ -2,9 +2,10 @@ import test, {after} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 const intervals=new Set();const interval=setInterval;globalThis.setInterval=(...args)=>{const timer=interval(...args);intervals.add(timer);return timer;};after(async()=>{await new Promise(r=>setTimeout(r,100));for(const timer of intervals)clearInterval(timer);});
-// The app service: sync status, and Gamma's cut-out built into the app (one link from elsewhere is ignored).
+// The app service: sync status, and Gamma's cut-out built into the app, named on another host as production does
+// (the editor shows its own service's copy) beside a handle that isn't one.
 const BUILT_IN=APP_SERVICE_URL+'/assets/cutouts/gamma.png';
-globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>({builtIn:[{handle:'gamma',url:BUILT_IN},{handle:'beta',url:'https://example.com/beta.png'}]})}):({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
+globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>({builtIn:[{handle:'gamma',url:'https://another.invalid/assets/cutouts/gamma.png'},{handle:'../beta',url:'x'}]})}):({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {Window} from '@remote-dom/polyfill';

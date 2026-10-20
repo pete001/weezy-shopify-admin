@@ -18,7 +18,8 @@ export function builtInCutouts(){
   if(!Array.isArray(body?.builtIn))return null;
   /** @type {Record<string,string>} */
   const out={};
-  for(const c of body.builtIn)if(typeof c?.handle==='string'&&typeof c?.url==='string'&&c.url.startsWith(APP_SERVICE_URL+'/assets/cutouts/'))out[c.handle]=c.url;
+  // Only the handle is taken: the picture is always this service's own copy (the service may name another host).
+  for(const c of body.builtIn)if(typeof c?.handle==='string'&&/^[a-z0-9][a-z0-9-]{0,199}$/.test(c.handle))out[c.handle]=`${APP_SERVICE_URL}/assets/cutouts/${c.handle}.png`;
   return out;
  }).catch(()=>null);
  return cutouts;
