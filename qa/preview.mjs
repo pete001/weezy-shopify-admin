@@ -3,6 +3,7 @@ import {build} from 'esbuild';
 import {createServer} from 'node:http';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const catalogue=JSON.parse(readFileSync(root+'fixtures/catalogue.json','utf8'));
 const all=Array.isArray(catalogue)?catalogue:catalogue.products;
@@ -25,8 +26,10 @@ const choosing=products.filter(p=>p.variants.nodes.length>1);
 const finishPhotos={checkedAt:new Date(Date.now()-12*60000).toISOString(),products:choosing.length,finishes:choosing.reduce((n,p)=>n+p.variants.nodes.length,0),
  needing:choosing.map(p=>({id:p.id.split('/').at(-1),handle:p.handle,title:p.title,finishes:p.variants.nodes.length,missing:gaps(p)})).filter(p=>p.missing.length)};
 finishPhotos.missing=finishPhotos.needing.reduce((n,p)=>n+p.missing.length,0);
-const data={finishPhotos,products,customer,shop:{id:'gid://shopify/Shop/1',appSets:{type:'json',compareDigest:'qa-sets',value:JSON.stringify({version:1,sets})}}};
-const fixture=`const data=${JSON.stringify(data)};let writes=0;const storage=new Map();window.__adminQA={get writes(){return writes},data,synthetic:true};window.fetch=async url=>String(url).includes('finish-photos')?({ok:true,json:async()=>data.finishPhotos}):({ok:true,json:async()=>({ready:true,products:{syncedAt:new Date().toISOString(),revisions:{}},sets:{digest:'qa-sets',syncedAt:new Date().toISOString()}})});window.shopify={storage:{get:async k=>storage.get(k),set:async(k,v)=>storage.set(k,structuredClone(v)),delete:async k=>storage.delete(k)},toast:{show:message=>{document.getElementById('qa-toast').textContent=message;}},query:async(q,{variables:v}={})=>{
+// The cut-outs built into the app: two of the charms without their own, pictured by real app cut-outs.
+const cutouts={builtIn:products.slice(3,5).map((p,i)=>({handle:p.handle,url:`${APP_SERVICE_URL}/assets/cutouts/${['battenberg-cake-charm','cherry-charm'][i]}.png`}))};
+const data={cutouts,finishPhotos,products,customer,shop:{id:'gid://shopify/Shop/1',appSets:{type:'json',compareDigest:'qa-sets',value:JSON.stringify({version:1,sets})}}};
+const fixture=`const data=${JSON.stringify(data)};let writes=0;const storage=new Map();window.__adminQA={get writes(){return writes},data,synthetic:true};window.fetch=async url=>String(url).includes('finish-photos')?({ok:true,json:async()=>data.finishPhotos}):String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>data.cutouts}):({ok:true,json:async()=>({ready:true,products:{syncedAt:new Date().toISOString(),revisions:{}},sets:{digest:'qa-sets',syncedAt:new Date().toISOString()}})});window.shopify={storage:{get:async k=>storage.get(k),set:async(k,v)=>storage.set(k,structuredClone(v)),delete:async k=>storage.delete(k)},toast:{show:message=>{document.getElementById('qa-toast').textContent=message;}},query:async(q,{variables:v}={})=>{
 if(q.startsWith('mutation')){if(q.includes('SavePurchaseClaim')){for(const f of v.fields)data.customer[f.key==='purchase_claims'?'collectionClaims':f.key==='manual_collection'?'manualCollection':'pending']={...f,compareDigest:'qa-'+(++writes)};}else{const f={...v.metafields[0],compareDigest:'qa-'+(++writes)};if(f.key==='app_images')data.products.find(p=>p.id===f.ownerId).appImages=f;else if(f.key==='app_sets')data.shop.appSets=f;else if(f.key==='app_order')data.shop.appOrder=f;else if(f.key==='manual_collection')data.customer.manualCollection=f;else throw Error('Unknown fixture write');}return{data:{metafieldsSet:{userErrors:[]}}};}
 if(q.includes('FindCollectionCustomer'))return{data:{customers:{nodes:[data.customer],pageInfo:{hasNextPage:false}}}};
 if(q.includes('PendingPurchaseClaims'))return{data:{customers:{nodes:[data.customer],pageInfo:{hasNextPage:false}}}};

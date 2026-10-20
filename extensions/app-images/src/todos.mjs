@@ -5,10 +5,14 @@ import {setReadiness} from './workflows.mjs';
 // What each product to-do covers and which products still need it. The product list (Product photos, Charm
 // stories, App catalogue) opens filtered to `?todo=<kind>`, showing what's left.
 export const productTodos={
- cutout:{area:'images',label:'charms that need a cut-out',applies:p=>!p.appHidden&&p.appCategory==='charms',needs:p=>!p.cutoutImageURL},
+ // A charm whose cut-out is built into the app (`builtInCutout`, from the app service) already has one.
+ cutout:{area:'images',label:'charms that need a cut-out',applies:p=>!p.appHidden&&p.appCategory==='charms',needs:p=>!p.cutoutImageURL&&!p.builtInCutout},
  story:{area:'stories',label:'charms that need a story',applies:p=>!p.appHidden&&p.appCategory==='charms',needs:p=>!p.appStory},
  review:{area:'catalogue',label:'products to check for the app',applies:()=>true,needs:p=>!p.reviewed},
 };
+
+// Marks each product whose cut-out is built into the app (`cutouts` is {handle: picture URL}).
+export const withBuiltInCutouts=(products,cutouts)=>products.map(p=>({...p,builtInCutout:cutouts?.[p.handle]??null}));
 
 export const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
 
@@ -37,9 +41,10 @@ export function todoFilter(kind){
 
 // Every to-do, most urgent first: customers waiting, then sets that won't show, then the catalogue's gaps.
 // `pending` is the number of purchases customers registered and are waiting on. Anything not loaded yet is null.
-/** @param {{products?:any[]|null,sets?:any[]|null,pending?:number|null,finishes?:any}} [input]
+// `cutouts` are the cut-outs built into the app ({handle: URL}); null leaves the cut-out card out rather than guess.
+/** @param {{products?:any[]|null,sets?:any[]|null,pending?:number|null,finishes?:any,cutouts?:Record<string,string>|null}} [input]
  * @returns {{id:string,href:string,total:number|null,done:number|null,count:number,title:string,why:string,action:string}[]} */
-export function buildTodos({products=null,sets=null,pending=null,finishes=null}={}){
+export function buildTodos({products=null,sets=null,pending=null,finishes=null,cutouts={}}={}){
  const list=[];
  if(pending!=null)list.push({id:'purchases',href:'/registrations',total:null,done:null,count:pending,
   title:pending?`${plural(pending,'purchase','purchases')} waiting for review`:'No purchases waiting',
@@ -61,11 +66,13 @@ export function buildTodos({products=null,sets=null,pending=null,finishes=null}=
    action:'Match finish photos'});
  }
  if(products!=null){
-  const words={cutout:['charm needs a cut-out','charms need a cut-out','Every charm has a cut-out','The set chain, the share pictures and the moment after buying use it. Without one the app shows the photo.','Add cut-outs'],
+  const words={cutout:['charm needs a cut-out','charms need a cut-out','Every charm has a cut-out','These charms have no cut-out in the app yet, so the set chain, the share pictures and the moment after buying show their photo instead. Charms with a cut-out built into the app already count as done.','Add cut-outs'],
    story:['charm needs a story','charms need a story','Every charm has its story','Without its own story a charm shows its website description in the app.','Write stories'],
    review:['product to check for the app','products to check for the app','Every product has been checked','Decide whether each product shows in the app and in which section.','Check products']};
+  const marked=withBuiltInCutouts(products,cutouts);
   for(const kind of ['cutout','story','review']){
-   const progress=todoProgress(kind,products),[one,many,done,why,action]=words[kind];
+   if(kind==='cutout'&&cutouts==null)continue;
+   const progress=todoProgress(kind,marked),[one,many,done,why,action]=words[kind];
    list.push({id:kind,href:`/${productTodos[kind].area}?todo=${kind}`,total:progress.total,done:progress.done,count:progress.left.length,
     title:progress.left.length?plural(progress.left.length,one,many):done,why,action});
   }
