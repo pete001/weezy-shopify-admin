@@ -5,7 +5,7 @@ import {buildTodos} from './todos.mjs';
 import {createImageEditor} from '../../../contracts/app-image-editor.mjs';
 import {createSetsEditor} from '../../../contracts/app-sets.mjs';
 import {createClaimsEditor} from '../../../contracts/collection-claims.mjs';
-import {appServiceURL} from './app-service.mjs';
+import {appServiceURL,builtInCutouts} from './app-service.mjs';
 import bundled from './bundled-heroes.json';
 import defaults from './bundled-sets.json';
 declare const shopify: Api;
@@ -39,7 +39,7 @@ export function Progress({done,total}:{done:number;total:number}){
 /// What needs doing, worked out from Shopify each time the start page opens: each card counts what's left and
 /// opens its list filtered to just those, ready to work through.
 export function Todos(){
- const [products,setProducts]=useState<any[]|null>(null),[sets,setSets]=useState<any[]|null>(null),[pending,setPending]=useState<number|null>(null),[finishes,setFinishes]=useState<any>(undefined),[error,setError]=useState('');
+ const [products,setProducts]=useState<any[]|null>(null),[sets,setSets]=useState<any[]|null>(null),[pending,setPending]=useState<number|null>(null),[finishes,setFinishes]=useState<any>(undefined),[cutouts,setCutouts]=useState<Record<string,string>|null|undefined>(undefined),[error,setError]=useState('');
  useEffect(()=>{
   let active=true;
   const products=createImageEditor({bundled,request}),setsAPI=createSetsEditor({defaults,request}),claims=createClaimsEditor({request});
@@ -49,11 +49,13 @@ export function Todos(){
   everything<any>((after:any)=>claims.pending(after),'customers').then(all=>{if(active)setPending(all.reduce((sum,c)=>sum+(c.count??0),0));},fail);
   // The service's finish photo check; when it can't answer, the card is left out rather than guessed.
   fetch(appServiceURL('/v1/catalogue/finish-photos')).then(r=>r.ok?r.json():null).catch(()=>null).then(result=>{if(active)setFinishes(result);});
+  // The cut-outs built into the app count as done; when the service can't say, the card is left out.
+  builtInCutouts().then((result:Record<string,string>|null)=>{if(active)setCutouts(result);});
   return ()=>{active=false;};
  },[]);
- const todos=buildTodos({products,sets,pending,finishes:finishes??null});
+ const todos=buildTodos({products,sets,pending,finishes:finishes??null,cutouts:cutouts??null});
  const open=todos.filter(t=>t.count>0),done=todos.filter(t=>t.count===0);
- const loading=products==null||sets==null||pending==null||finishes===undefined;
+ const loading=products==null||sets==null||pending==null||finishes===undefined||cutouts===undefined;
  return <s-section heading="To do">
   <s-stack gap="large">
    {error?<s-banner tone="critical">{error}</s-banner>:null}

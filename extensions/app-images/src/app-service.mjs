@@ -1,9 +1,26 @@
 // The app service: the server the Weezy Pop iPhone app reads its catalogue, sets and checkout offers from.
-// The editor only reads three public endpoints from it (no credentials, no writes):
+// The editor only reads four public endpoints from it (no credentials, no writes):
 //   GET /v1/catalogue/sync          when the service last picked up the editor's saved metafields
 //   GET /v1/set-checkout-status     whether app-only set offers can be switched on ({ready: true})
 //   GET /v1/catalogue/finish-photos the finishes the app has no photo for, checked every 30 minutes (To do)
+//   GET /v1/catalogue/cutouts       the cut-outs built into the app, by product handle, and where to see them
 // It is the one place the editor names the service: pete001/weezy-app's service on its own Fly app,
 // weezy-pop-app (it replaced the earlier weezy-pop-club reader on 12 October 2026).
 export const APP_SERVICE_URL = 'https://weezy-pop-app.fly.dev';
 export const appServiceURL = path => APP_SERVICE_URL + path;
+
+// The cut-outs built into the app, as {handle: picture URL}; null when the service can't say. Read once per page.
+/** @type {Promise<Record<string,string>|null>|undefined} */
+let cutouts;
+/** @returns {Promise<Record<string,string>|null>} */
+export function builtInCutouts(){
+ cutouts??=fetch(appServiceURL('/v1/catalogue/cutouts')).then(r=>r.ok?r.json():null).then(body=>{
+  if(!Array.isArray(body?.builtIn))return null;
+  /** @type {Record<string,string>} */
+  const out={};
+  // Only the handle is taken: the picture is always this service's own copy (the service may name another host).
+  for(const c of body.builtIn)if(typeof c?.handle==='string'&&/^[a-z0-9][a-z0-9-]{0,199}$/.test(c.handle))out[c.handle]=`${APP_SERVICE_URL}/assets/cutouts/${c.handle}.png`;
+  return out;
+ }).catch(()=>null);
+ return cutouts;
+}
