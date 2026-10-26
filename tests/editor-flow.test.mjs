@@ -1,7 +1,11 @@
 import test, {after} from 'node:test';
 import {readFileSync} from 'node:fs';
+import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 const intervals=new Set();const interval=setInterval;globalThis.setInterval=(...args)=>{const timer=interval(...args);intervals.add(timer);return timer;};after(async()=>{await new Promise(r=>setTimeout(r,100));for(const timer of intervals)clearInterval(timer);});
-globalThis.fetch=async()=>({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
+// The app service: sync status, and Gamma's cut-out built into the app, named on another host as production does
+// (the editor shows its own service's copy) beside a handle that isn't one.
+const BUILT_IN=APP_SERVICE_URL+'/assets/cutouts/gamma.png';
+globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/finish-photos')?({ok:true,json:async()=>({finishes:1,missing:0,needing:[]})}):String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>({builtIn:[{handle:'gamma',url:'https://another.invalid/assets/cutouts/gamma.png'},{handle:'../beta',url:'x'}]})}):({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {Window} from '@remote-dom/polyfill';
@@ -51,6 +55,13 @@ const text=()=>document.body.textContent;
 const by=(tag,label)=>nodes().find(n=>n.localName===tag&&(n.getAttribute('accessibilityLabel')===label||n.textContent===label));
 const click=(tag,label)=>{const n=by(tag,label);assert.ok(n,`Missing ${label}`);n.dispatchEvent(new Event('click'));};
 async function until(predicate){const start=Date.now();while(!predicate()){if(Date.now()-start>4000)throw Error(`UI did not settle: ${text().slice(0,1500)}`);await new Promise(r=>setTimeout(r,10));}}
+
+test('product editing loads while optional artwork is still unavailable',async()=>{
+ const original=globalThis.fetch;let unblock;
+ globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/cutouts')?new Promise(resolve=>{unblock=resolve;}):original(url);
+ try{extension.default();await until(()=>text().includes('Ready to review'));assert.ok(by('s-clickable','Open Beta'));}
+ finally{if(unblock)unblock({ok:true,json:async()=>({builtIn:[{handle:'gamma'}]})});globalThis.fetch=original;}
+});
 
 test('switching areas after loading/editing another product replaces all old content and retains saved data',async()=>{
  extension.default();await until(()=>text().includes('Ready to review'));
@@ -249,9 +260,14 @@ test('customer name search shows exact account email before any ownership write'
 });
 
 test('start page explains each independent task and links to all eight workflows without writes',async()=>{
- await go('/');await until(()=>text().includes('What would you like to do?')||nodes().some(n=>n.getAttribute?.('heading')==='What would you like to do?'));
+ await go('/');await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools'));
  const before=writes;for(const area of ['images','finishes','stories','catalogue','sets','order','registrations','collections'])assert.ok(nodes().some(n=>n.localName==='s-button'&&n.getAttribute('href')===`/${area}`),area);
  assert.ok(text().includes('Product titles, prices, stock'));assert.equal(writes,before);
+ // To do: what's left, each linking to its list filtered to just those, read-only.
+ await until(()=>text().includes('things to do')||text().includes('thing to do'));
+ assert.ok(nodes().some(n=>n.getAttribute?.('heading')==='To do'));
+ assert.ok(nodes().some(n=>n.localName==='s-button'&&n.getAttribute('href')==='/catalogue?todo=review'),'products to check link to the filtered catalogue');
+ assert.ok(text().includes('of 4 done'));assert.equal(writes,before);
 });
 
 test('hiding a photo used for a finish needs confirmation and cancelling preserves its assignment',async()=>{
@@ -272,11 +288,59 @@ test('badge appearance offers pictured set members, validates custom colour and 
  field.value='#FAB7EB';field.dispatchEvent(new Event('input'));await until(()=>!text().includes('Check Badge appearance'));
  click('s-button','Save sets to Shopify');await until(()=>text().includes('Saved to Shopify'));
  const authored=JSON.parse(shop.appSets.value).sets[0];assert.equal(authored.badge_color,'#FAB7EB');assert.equal(authored.badge_hero_handle,'alpha');assert.equal(JSON.stringify(products),media,'No product or website photos were changed');
- await go('/');await until(()=>text().includes('What would you like to do?')||nodes().some(n=>n.getAttribute?.('heading')==='What would you like to do?'));
+ await go('/');await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools'));
  await go('/sets');await until(()=>!!by('s-button','5. Badge appearance'));click('s-button','5. Badge appearance');await until(()=>text().includes('Selected badge charm'));
  click('s-button','Use default lilac');await until(()=>nodes().some(n=>n.localName==='s-color-field'&&n.getAttribute('label')==='Default badge colour'));click('s-clickable','Use numeral only for badge');await until(()=>!text().includes('Selected badge charm'));click('s-button','Save sets to Shopify');await until(()=>text().includes('Saved to Shopify'));
  assert.equal(JSON.parse(shop.appSets.value).sets[0].badge_color,undefined);assert.equal(JSON.parse(shop.appSets.value).sets[0].badge_hero_handle,undefined);
  const afterFallback=writes;click('s-clickable','Use Alpha for badge');await until(()=>text().includes('Selected badge charm'));click('s-button','2. Pieces & quantities');await until(()=>!!by('s-button','Remove Alpha from this set'));click('s-button','Remove Alpha from this set');await until(()=>!!by('s-button','Confirm remove Alpha'));click('s-button','Confirm remove Alpha');
  await until(()=>[...storage.values()].some(d=>d.sets?.[0]?.member_handles.length===2&&!d.sets[0].badge_hero_handle));assert.equal(writes,afterFallback,'Removing the hero remains an explicit unsaved draft');
  click('s-button','Discard unsaved changes');await until(()=>!text().includes('Unsaved changes'));assert.equal(JSON.parse(shop.appSets.value).sets[0].member_handles.length,3);
+});
+test('the charm cut-out is a draft until saved, previews the link and stores only app metadata',async()=>{
+ await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
+ await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Charm cut-out')&&text().includes('No cut-out yet'));
+ const field=()=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')==='Cut-out link from Shopify Files');
+ const media=JSON.stringify(products[1].media),before=writes;
+ field().value='https://example.com/beta.png';field().dispatchEvent(new Event('input'));
+ await until(()=>!!field().getAttribute('error'));assert.ok(by('s-button','Save cut-out').getAttribute('disabled')!=null);assert.equal(writes,before);
+ const png='https://cdn.shopify.com/s/files/1/0904/files/beta-cutout.png?v=1';
+ field().value=png;field().dispatchEvent(new Event('input'));
+ await until(()=>text().includes('Unsaved cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png));
+ assert.equal(writes,before);assert.equal(await go('/order'),false);
+ click('s-button','Save cut-out');await until(()=>text().includes('Cut-out saved')&&JSON.parse(products[1].appImages.value).appCutout===png);
+ assert.ok(text().includes('Beta')&&text().includes(' · Cut-out'));
+ click('s-button','Remove cut-out');await until(()=>text().includes('Saving removes your cut-out'));click('s-button','Save · remove my cut-out');
+ await until(()=>text().includes('No cut-out yet')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
+ assert.equal(JSON.stringify(products[1].media),media);
+});
+test('a to-do opens its list filtered to just what is left, with its progress and a way back to every product',async()=>{
+ // one product without app settings yet, as a new product would be
+ const saved=products[2].appImages;products[2].appImages=null;
+ await go('/catalogue?todo=review');await until(()=>text().includes('To do: products to check for the app')&&Number(text().match(/\d+ of (\d+) done/)?.[1])>0);
+ const [,done,total]=text().match(/(\d+) of (\d+) done/).map(Number),left=total-done;
+ assert.ok(left>0,'the fixture has products still to check');
+ assert.ok(text().includes(`${left} left`));assert.ok(text().includes(`${left} matching products`),'the list shows just what is left');
+ click('s-button','Show every product');await until(()=>!text().includes('To do: products to check'));
+ assert.ok(Number(text().match(/(\d+) matching products/)[1])>left,'every product is back');
+ products[2].appImages=saved;
+});
+
+test('a cut-out built into the app shows as the charm’s cut-out, with nothing to do',async()=>{
+ await go('/images');const gamma=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Gamma'));
+ await until(()=>gamma()&&!gamma().getAttribute('disabled')&&text().includes('Cut-out built into the app'));gamma().dispatchEvent(new Event('click'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Gamma')&&text().includes('Built into the app'));
+ assert.ok(text().includes('nothing to do here'));assert.ok(text().includes('Replace it with your own (optional)'));
+ assert.ok(nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===BUILT_IN));
+});
+
+test('the start page does not announce all done when optional service checks are unavailable',async t=>{
+ const oldProducts=structuredClone(products),oldSets=structuredClone(shop.appSets),oldPending=customer.pending,oldFetch=globalThis.fetch;
+ t.after(()=>{products.splice(0,products.length,...oldProducts);shop.appSets=oldSets;customer.pending=oldPending;globalThis.fetch=oldFetch;});
+ products.forEach(p=>{p.appImages={type:'json',compareDigest:'complete',value:JSON.stringify({version:1,images:[],appCategory:'charms',appStory:'Complete story.',appCutout:'https://cdn.shopify.com/s/files/1/complete.png'})};});
+ shop.appSets={type:'json',compareDigest:'complete',value:JSON.stringify({version:1,sets:[]})};customer.pending={value:'0'};
+ globalThis.fetch=async()=>{throw Error('Synthetic service outage');};
+ await go('/',false);await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools')&&!text().includes('Working out what needs doing'));
+ assert.ok(!text().includes('All done. Nothing needs doing right now.'),'Unavailable checks cannot certify completion');
+ assert.ok(text().includes('Some checks are unavailable'),'Partial results are explained');
 });

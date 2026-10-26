@@ -6,7 +6,10 @@ import {render} from 'preact';
 import {Sets} from './Sets';
 import {finishPhoto} from './photo-workflow.mjs';
 import {FinishPhotos} from './FinishPhotos';
-import {Overview,areas,type Area,tasks} from './Overview';
+import {Cutout} from './Cutout';
+import {Overview,areas,type Area,tasks,Progress} from './Overview';
+import {productTodos,todoFilter,todoProgress,withBuiltInCutouts} from './todos.mjs';
+import {readAppService,finishPhotoCheck,builtInCutouts} from './app-service.mjs';
 import {Collections} from './Collections';
 import {Ordering} from './Ordering';
 import {ProductPreview,SyncStatus} from './EditorTools';
@@ -20,8 +23,8 @@ import bundled from './bundled-heroes.json';
 import {createEditorSession} from './session.mjs';
 
 type Photo = {id:string;url:string;alt:string;hidden:boolean};
-type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string};
-type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string};
+type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string;cutoutImageURL?:string|null;builtInCutout?:string|null;appStory?:string|null};
+type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null};
 type State = {product:Product|null;status:string;error:string|null;notice:string|null};
 const api=createImageEditor({bundled,request:(query:string,variables:Record<string,unknown>)=>shopify.query(query,{variables})});
 const session=createEditorSession(api);
@@ -43,28 +46,44 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   const [state,setState]=useState<State>(session.snapshot());
   const [items,setItems]=useState<Item[]>([]),[search,setSearch]=useState(''),[unreviewed,setUnreviewed]=useState(false);
   const [loading,setLoading]=useState(true),[listError,setListError]=useState(''),[opening,setOpening]=useState(false);
-  const [finishDirty,setFinishDirty]=useState(false),[story,setStory]=useState(()=>state.product?.appStory??''),[storyDirty,setStoryDirty]=useState(false),[hideCandidate,setHideCandidate]=useState<string|null>(null);
-  const draft=finishDirty||storyDirty||!!hideCandidate;
+  const [finishDirty,setFinishDirty]=useState(false),[cutoutDirty,setCutoutDirty]=useState(false),[story,setStory]=useState(()=>state.product?.appStory??''),[storyDirty,setStoryDirty]=useState(false),[hideCandidate,setHideCandidate]=useState<string|null>(null);
+  const draft=finishDirty||cutoutDirty||storyDirty||!!hideCandidate;
   const [previous,setPrevious]=useState<Photo[]|null>(null),[listPage,setListPage]=useState(0);
   const [visibility,setVisibility]=useState('all'),[category,setCategory]=useState(mode==='stories'?'charms':'all');
+  // Opened from the start page's To do: just what's left of that to-do (?todo=cutout, story or review).
+  const [todo,setTodo]=useState<string|null>(()=>{const kind=new URL(window.location?.href??'https://app.invalid').searchParams.get('todo');return kind&&((productTodos as any)[kind]?.area===mode||(kind==='finish'&&mode==='finishes'))?kind:null;});
+  // Finish photos to do: the products the service found without a photo for a finish, less any fixed here since.
+  const [finishCheck,setFinishCheck]=useState<any>(null),[fixed,setFixed]=useState<string[]>([]);
+  // The cut-outs built into the app, by handle (from the app service): a charm with one already has its cut-out.
+  const [cutouts,setCutouts]=useState<Record<string,string>|null>(null);
+  useEffect(()=>{let active=true;if(todo==='finish')void readAppService('/v1/catalogue/finish-photos').then(value=>{if(active)setFinishCheck(finishPhotoCheck(value));});return()=>{active=false;};},[todo]);
+  // Optional artwork enriches the list without holding product editing behind the app service.
+  useEffect(()=>{let active=true;void builtInCutouts().then(value=>{if(active)setCutouts(value);});return()=>{active=false;};},[]);
   const [selectedIDs,setSelectedIDs]=useState<string[]>([]),[bulkVisibility,setBulkVisibility]=useState('keep'),[bulkCategory,setBulkCategory]=useState('keep');
   const [bulkReviewPage,setBulkReviewPage]=useState(0);
   const [bulkBusy,setBulkBusy]=useState(false),[bulkPlan,setBulkPlan]=useState<any>(null),[bulkError,setBulkError]=useState(''),[bulkResult,setBulkResult]=useState<any>(null),[bulkProgress,setBulkProgress]=useState('');
   const product=state.product;
   const blocked=opening||state.status==='loading'||!!state.error||bulkBusy||!!bulkPlan;
   const navigateBlocked=blocked||state.status==='saving'||draft;
-  const matching:Item[]=filterProducts(items,{search,visibility,category,unreviewed});
+  const needing:any[]=(finishCheck?.needing??[]).filter((p:any)=>!fixed.includes(p.id));
+  const markedItems=withBuiltInCutouts(items,cutouts);
+  const matching:Item[]=filterProducts(markedItems,{search,visibility,category,unreviewed}).filter(todo==='finish'?(p:Item)=>needing.some(n=>n.id===p.id):todo?todoFilter(todo):()=>true);
+  const progress=todo==='finish'?(finishCheck?{done:finishCheck.finishes-needing.reduce((n:number,p:any)=>n+p.missing.length,0),total:finishCheck.finishes,left:needing}:null):todo?todoProgress(todo,markedItems):null;
   const index=matching.findIndex(p=>p.id===product?.id);
   const page=Math.min(listPage,Math.max(0,Math.ceil(matching.length/8)-1));
   const visibleItems=matching.slice(page*8,page*8+8);
-  useEffect(()=>{setListPage(0);setSelectedIDs([]);},[search,unreviewed,visibility,category]);
+  useEffect(()=>{setListPage(0);setSelectedIDs([]);},[search,unreviewed,visibility,category,todo]);
   const lastProduct=useRef(product?.id);
   useEffect(()=>{if(lastProduct.current!==product?.id){lastProduct.current=product?.id;setHideCandidate(null);setStory(product?.appStory??'');setStoryDirty(false);}},[product?.id]);
   useEffect(()=>{if(index>=0)setListPage(Math.floor(index/8));},[product?.id]);
   useEffect(()=>session.subscribe(setState),[]);
+  // Once the check is in, start on the first product that needs a finish photo.
+  useEffect(()=>{if(todo==='finish'&&finishCheck&&needing.length&&!needing.some(n=>n.id===product?.id)&&!navigateBlocked)void open(needing[0].id);},[finishCheck,navigateBlocked,items.length]);
+  // A product whose finishes all have a photo now leaves the finish photos to do at once.
+  useEffect(()=>{if(todo==='finish'&&product&&product.variants.length&&product.variants.every(v=>finishPhoto(product,v).url))setFixed(old=>old.includes(product.id)?old:[...old,product.id]);},[todo,product]);
   onBlocked(navigateBlocked);
   useEffect(()=>{void loadList();},[]);
-  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory]);
+  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory,cutoutImageURL:product.cutoutImageURL,appStory:product.appStory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory,product?.cutoutImageURL,product?.appStory]);
   async function loadList(){
     setLoading(true);setListError('');
     try {
@@ -75,8 +94,10 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         if(cursor)seen.add(cursor);
       }while(cursor);
       setItems(all);const requested=new URL(window.location?.href??'https://app.invalid').searchParams.get('product');
+      // A to-do opens on its first product still to do.
+      const first=todo?all.find(todoFilter(todo)):all[0];
       if(requested&&all.some(p=>p.id===requested)&&requested!==product?.id)await session.open(requested,{discard:true});
-      else if(!product&&all.length)await session.open(all[0].id,{discard:true});
+      else if(first&&(!product||(todo&&!todoFilter(todo)(product as Item))))await session.open(first.id,{discard:true});
     }catch(error){setListError(error instanceof Error?error.message:'Could not load products.');}
     finally{setLoading(false);}
   }
@@ -120,6 +141,14 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
     <s-section heading="How this section works"><s-paragraph>{tasks.find(t=>t.area===mode)?.steps}</s-paragraph><s-text color="subdued">{tasks.find(t=>t.area===mode)?.save}</s-text></s-section>
     <s-section key="product-list" slot="aside" heading="Products">
       <s-stack gap="base">
+        {todo&&progress?<s-box padding="base" border="base" borderRadius="base"><s-stack gap="small">
+          <s-text type="strong">To do: {todo==='finish'?'finishes that need a photo':(productTodos as any)[todo].label}</s-text>
+          <Progress done={progress.done} total={progress.total}/>
+          <s-text>{progress.left.length?`${progress.left.length} ${todo==='finish'?(progress.left.length===1?'product':'products'):''} left`.replace('  ',' '):'All done. Every one is sorted.'}</s-text>
+          {todo==='finish'?<s-text color="subdued">The list is checked every 30 minutes; a product you’ve matched here leaves it straight away.</s-text>:null}
+          {product&&!matching.some(p=>p.id===product.id)&&matching.length?<s-stack gap="small-200"><s-badge tone="success">{product.title} is done</s-badge><s-stack direction="inline"><Button variant="primary" disabled={navigateBlocked} onClick={()=>void open(matching[0].id)}>Next: {matching[0].title}</Button></s-stack></s-stack>:null}
+          <s-stack direction="inline" gap="small"><Button href="/" disabled={navigateBlocked}>Back to To do</Button><Button disabled={navigateBlocked} onClick={()=>setTodo(null)}>Show every product</Button></s-stack>
+        </s-stack></s-box>:null}
         <SearchField label="Find a product" placeholder="Search products" disabled={navigateBlocked} value={search} onInput={event=>setSearch(event.currentTarget.value)}/>
         {mode==='images'?<Checkbox label="Only needs review" disabled={navigateBlocked} checked={unreviewed} onChange={event=>setUnreviewed(event.currentTarget.checked)}/>:null}
         <Select label="App visibility" value={visibility} disabled={navigateBlocked} onChange={e=>setVisibility(e.currentTarget.value)}><s-option value="all">All products</s-option><s-option value="visible">Visible in app</s-option><s-option value="hidden">Hidden from app</s-option></Select>
@@ -133,7 +162,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         {visibleItems.map(item=><s-stack key={item.id} gap="small">{mode==='catalogue'?<Checkbox label={`Select ${item.title}`} checked={selectedIDs.includes(item.id)} disabled={navigateBlocked} onChange={e=>setSelectedIDs(old=>e.currentTarget.checked?[...old.filter(id=>id!==item.id),item.id]:old.filter(id=>id!==item.id))}/>:null}<Clickable key={item.id} padding="small" border="base" borderRadius="base" background={item.id===product?.id?'strong':'base'} disabled={navigateBlocked} onClick={()=>open(item.id)} accessibilityLabel={`Open ${item.title}${item.reviewed?', reviewed':''}`}>
           <s-grid gridTemplateColumns="40px 1fr" gap="small" alignItems="center">
             {item.imageURL?<s-thumbnail src={item.imageURL} alt="" size="small"/>:<s-box/>}
-            <s-stack gap="small-200"><s-text type="strong">{item.title}</s-text><s-text color="subdued">{categoryLabels[item.appCategory as keyof typeof categoryLabels]} · {item.appHidden?'Hidden from app':mode==='images'?(item.reviewed?'Reviewed':'Needs review'):'Visible in app'}</s-text></s-stack>
+            <s-stack gap="small-200"><s-text type="strong">{item.title}</s-text><s-text color="subdued">{categoryLabels[item.appCategory as keyof typeof categoryLabels]} · {item.appHidden?'Hidden from app':mode==='images'?(item.reviewed?'Reviewed':'Needs review'):'Visible in app'}{mode==='images'?(item.cutoutImageURL?' · Cut-out':item.builtInCutout?' · Cut-out built into the app':''):''}</s-text></s-stack>
           </s-grid>
         </Clickable></s-stack>)}
         {matching.length>8?<s-stack direction="inline" gap="small" alignItems="center">
@@ -194,7 +223,9 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         </s-stack><s-stack gap="base"><s-box padding="base" border="base" borderRadius="large"><s-stack gap="base"><s-heading>Existing website description</s-heading><s-paragraph>{product.websiteDescription||'No website description recorded. Add approved app copy before launch.'}</s-paragraph><s-link href={product.shopifyURL}>Open product in Shopify</s-link></s-stack></s-box><s-box padding="base" border="base" borderRadius="large"><s-heading>App story preview</s-heading><s-paragraph>{story.trim()||product.websiteDescription||'This charm still needs a story.'}</s-paragraph></s-box></s-stack></s-grid>:null}
         <SyncStatus kind="products" handle={product.handle} digest={product.digest} dirty={state.status==='saving'||!!state.error||draft}/>
         {mode==='images'?<>
-        <ProductPreview product={product}/>
+        {todo!=='cutout'?<ProductPreview product={product}/>:null}
+        <Cutout key={product.id} product={product} builtInURL={cutouts?.[product.handle]??null} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}}/>
+        {todo==='cutout'?<ProductPreview product={product}/>:null}
         <s-paragraph>Click a photo to preview it. Use the labelled buttons to show, hide or reorder it. The first visible photo is the app cover.</s-paragraph>
         {state.notice?<s-banner tone="warning">{state.notice}</s-banner>:null}
         {!product.images.length?<s-banner tone="warning">This product has no images to review.</s-banner>:null}

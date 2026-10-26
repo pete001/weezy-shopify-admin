@@ -4,7 +4,7 @@ This repository defines the `charm_club` metafields. The App Editor writes them;
 
 | Owner and field | App-only purpose | Modules |
 |---|---|---|
-| Product `charm_club.app_images` (JSON) | Visible image IDs/order, exact variant media mapping, compact app story, visibility/category | `app-image-settings.mjs`, `app-image-editor.mjs` |
+| Product `charm_club.app_images` (JSON) | Visible image IDs/order, exact variant media mapping, compact app story, visibility/category, optional charm cut-out | `app-image-settings.mjs`, `app-image-editor.mjs` |
 | Shop `charm_club.app_sets` (JSON) | Stable set identity/order, membership/quantities/variant restrictions, offers and badge appearance | `app-sets.mjs` |
 | Shop `charm_club.app_order` (JSON) | Product order by app section | `app-order.mjs` |
 | Customer `charm_club.manual_collection` (JSON) | Verified staff grants and revocations | `manual-collection.mjs` |
@@ -14,6 +14,8 @@ This repository defines the `charm_club` metafields. The App Editor writes them;
 Use the validators/query constants in contracts/ as the executable definition of these fields, including permitted bounds and exact serialized key names. Preserve schema version1, existing IDs and unknown unrelated editorial data. `roman_ordinal` remains a historical storage compatibility field; it must not reintroduce set numbering into customer UI.
 
 Product metadata supports the compact `appStory` already authored by staff. App covers come from the first visible editor-controlled media entry, independently of the customer's personal variant. Do not infer a different cover from a device's selected hardware. Exact variant image assignment belongs to the detail/chooser/basket projection, and cannot reveal hidden photos. Gold-hardware coloured charm photos are the approved merchandising choice; Shopify's public featured photo is unchanged.
+
+Product metadata may hold one optional `appCutout` (added 17 Oct 2026, still version 1): the Shopify Files link (`https://cdn.shopify.com/s/files/…`, ending `.png` or `.webp`) of a transparent cut-out of the charm on its gold connector loop. The app hangs it on the chain in set progress; `readAppListing` returns it as `cutoutImageURL` (null when absent). Records without it stay valid, and a malformed stored value fails closed like the other listing fields. Staff upload the PNG in Shopify Content → Files and paste its link, because the editor has no files scope (`fileCreate` needs `write_files`) and must never add it to the product's website media. Readers in weezy-app prefer this link, then a cut-out bundled with the app, then the cover photo in a round frame. An editor build older than this field drops `appCutout` on its next save of that product, so ship this editor before staff add cut-outs.
 
 Set membership is not a purchase or badge grant. Repeated members use quantity metadata, not duplicate product identities. Pending basket pieces never count as owned. Preserve Terry-specific free-chain handling, verified £10 set eligibility and the prohibition on stacking the individual charm offer with complete sets. Website discounts/prices remain Shopify-owned and outside these editor writes.
 

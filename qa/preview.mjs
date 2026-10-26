@@ -3,6 +3,7 @@ import {build} from 'esbuild';
 import {createServer} from 'node:http';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const catalogue=JSON.parse(readFileSync(root+'fixtures/catalogue.json','utf8'));
 const all=Array.isArray(catalogue)?catalogue:catalogue.products;
@@ -11,11 +12,24 @@ const specials=['moon','sun','swirl-charm','smiley-charm'];
 for(const handle of specials){const p=all.find(p=>p.handle===handle);if(p&&!raw.includes(p))raw.unshift(p);}
 const photos=p=>p.images.slice(0,12).map((url,i)=>({id:`gid://shopify/MediaImage/${p.id}${i+1}`,image:{url,altText:`${p.title} photo ${i+1}`}}));
 const products=raw.map(p=>({id:`gid://shopify/Product/${p.id}`,handle:p.handle,title:p.title,description:p.description??'A playful Weezy Pop collectible. Mix, match and wear it your way.',status:'ACTIVE',publishedAt:'2026-01-01',productType:'charm',featuredMedia:{preview:{image:{url:p.images[0]}}},variants:{nodes:p.variants.slice(0,16).map(v=>({id:`gid://shopify/ProductVariant/${v.id}`,title:v.title,image:v.imageURL?{url:v.imageURL}:null})),pageInfo:{hasNextPage:false}},media:{nodes:photos(p),pageInfo:{hasNextPage:false}},appImages:null}));
+// A few products already done, so the start page's To do shows real progress: three charms with a cut-out and a
+// story, two more checked for the app. Synthetic links only.
+products.forEach((p,i)=>{if(i<5)p.appImages={type:'json',compareDigest:`qa-seed-${i}`,value:JSON.stringify({version:1,images:[],appCategory:'charms',...(i<3?{appCutout:`https://cdn.shopify.com/s/files/1/0000/0000/files/qa-cutout-${i}.png`,appStory:'A synthetic story for the preview.'}:{})})};});
 const members=products.slice(0,4).map(p=>p.handle);
 const sets=[{id:'qa-celestial',name:'Celestial Magic · preview',enabled:true,member_handles:members,member_quantities:{[members[1]]:2},roman_ordinal:'V',badge_name:'Celestial Magic',badge_glyph:'V'},{id:'qa-second',name:'Big Top Energy · preview',enabled:false,member_handles:products.slice(4,8).map(p=>p.handle),roman_ordinal:'IV',badge_name:'Big Top Energy',badge_glyph:'IV'}];
 const customer={id:'gid://shopify/Customer/999999',displayName:'Claire Review · synthetic',defaultEmailAddress:{emailAddress:'claire@example.invalid'},manualCollection:null,collectionClaims:{type:'json',compareDigest:'qa-claims',value:JSON.stringify({version:1,claims:[{id:'5b670b88-2cda-42c8-a728-4fcf65a984ba',productID:products[0].id.split('/').at(-1),variantID:products[0].variants.nodes[0].id.split('/').at(-1),quantity:1,source:'stockist',place:'Synthetic Baltic purchase',purchaseDate:'2026-10-05',note:'Synthetic evidence for preview only.',photo:readFileSync(root+'fixtures/purchase-proof.jpg').toString('base64'),state:'pending',submittedAt:'2026-10-06T12:00:00Z'}]})},pending:{value:'1'}};
-const data={products,customer,shop:{id:'gid://shopify/Shop/1',appSets:{type:'json',compareDigest:'qa-sets',value:JSON.stringify({version:1,sets})}}};
-const fixture=`const data=${JSON.stringify(data)};let writes=0;const storage=new Map();window.__adminQA={get writes(){return writes},data,synthetic:true};window.fetch=async()=>({ok:true,json:async()=>({ready:true,products:{syncedAt:new Date().toISOString(),revisions:{}},sets:{digest:'qa-sets',syncedAt:new Date().toISOString()}})});window.shopify={storage:{get:async k=>storage.get(k),set:async(k,v)=>storage.set(k,structuredClone(v)),delete:async k=>storage.delete(k)},toast:{show:message=>{document.getElementById('qa-toast').textContent=message;}},query:async(q,{variables:v}={})=>{
+// The service's finish photo check, synthetic, by the editor's rule: a finish whose website photo isn't one of the
+// product's photos needs one. Products with a choice of finish only.
+const path=u=>{try{return new URL(u).pathname}catch{return null}};
+const gaps=p=>p.variants.nodes.filter(v=>!p.media.nodes.some(m=>path(m.image.url)===path(v.image?.url))).map(v=>({id:v.id.split('/').at(-1),title:v.title}));
+const choosing=products.filter(p=>p.variants.nodes.length>1);
+const finishPhotos={checkedAt:new Date(Date.now()-12*60000).toISOString(),products:choosing.length,finishes:choosing.reduce((n,p)=>n+p.variants.nodes.length,0),
+ needing:choosing.map(p=>({id:p.id.split('/').at(-1),handle:p.handle,title:p.title,finishes:p.variants.nodes.length,missing:gaps(p)})).filter(p=>p.missing.length)};
+finishPhotos.missing=finishPhotos.needing.reduce((n,p)=>n+p.missing.length,0);
+// The cut-outs built into the app: two of the charms without their own, pictured by real app cut-outs.
+const cutouts={builtIn:products.slice(3,5).map((p,i)=>({handle:p.handle,url:`${APP_SERVICE_URL}/assets/cutouts/${['battenberg-cake-charm','cherry-charm'][i]}.png`}))};
+const data={cutouts,finishPhotos,products,customer,shop:{id:'gid://shopify/Shop/1',appSets:{type:'json',compareDigest:'qa-sets',value:JSON.stringify({version:1,sets})}}};
+const fixture=`const data=${JSON.stringify(data)};let writes=0;const storage=new Map();window.__adminQA={get writes(){return writes},data,synthetic:true};window.fetch=async url=>String(url).includes('finish-photos')?({ok:true,json:async()=>data.finishPhotos}):String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>data.cutouts}):({ok:true,json:async()=>({ready:true,products:{syncedAt:new Date().toISOString(),revisions:{}},sets:{digest:'qa-sets',syncedAt:new Date().toISOString()}})});window.shopify={storage:{get:async k=>storage.get(k),set:async(k,v)=>storage.set(k,structuredClone(v)),delete:async k=>storage.delete(k)},toast:{show:message=>{document.getElementById('qa-toast').textContent=message;}},query:async(q,{variables:v}={})=>{
 if(q.startsWith('mutation')){if(q.includes('SavePurchaseClaim')){for(const f of v.fields)data.customer[f.key==='purchase_claims'?'collectionClaims':f.key==='manual_collection'?'manualCollection':'pending']={...f,compareDigest:'qa-'+(++writes)};}else{const f={...v.metafields[0],compareDigest:'qa-'+(++writes)};if(f.key==='app_images')data.products.find(p=>p.id===f.ownerId).appImages=f;else if(f.key==='app_sets')data.shop.appSets=f;else if(f.key==='app_order')data.shop.appOrder=f;else if(f.key==='manual_collection')data.customer.manualCollection=f;else throw Error('Unknown fixture write');}return{data:{metafieldsSet:{userErrors:[]}}};}
 if(q.includes('FindCollectionCustomer'))return{data:{customers:{nodes:[data.customer],pageInfo:{hasNextPage:false}}}};
 if(q.includes('PendingPurchaseClaims'))return{data:{customers:{nodes:[data.customer],pageInfo:{hasNextPage:false}}}};
