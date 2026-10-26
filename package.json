@@ -24,7 +24,7 @@
   "dependencies": {
     "@preact/signals": "^2.11.3",
     "@shopify/ui-extensions": "2026.10.0",
-    "preact": "10.27.3"
+    "preact": "11.0.1"
   },
   "engines": {
     "node": ">=24 <25"
