@@ -5,7 +5,7 @@ import {buildTodos} from './todos.mjs';
 import {createImageEditor} from '../../../contracts/app-image-editor.mjs';
 import {createSetsEditor} from '../../../contracts/app-sets.mjs';
 import {createClaimsEditor} from '../../../contracts/collection-claims.mjs';
-import {appServiceURL,builtInCutouts} from './app-service.mjs';
+import {readAppService,finishPhotoCheck,builtInCutouts} from './app-service.mjs';
 import bundled from './bundled-heroes.json';
 import defaults from './bundled-sets.json';
 declare const shopify: Api;
@@ -39,30 +39,33 @@ export function Progress({done,total}:{done:number;total:number}){
 /// What needs doing, worked out from Shopify each time the start page opens: each card counts what's left and
 /// opens its list filtered to just those, ready to work through.
 export function Todos(){
+ const [attempt,setAttempt]=useState(0);
  const [products,setProducts]=useState<any[]|null>(null),[sets,setSets]=useState<any[]|null>(null),[pending,setPending]=useState<number|null>(null),[finishes,setFinishes]=useState<any>(undefined),[cutouts,setCutouts]=useState<Record<string,string>|null|undefined>(undefined),[error,setError]=useState('');
  useEffect(()=>{
-  let active=true;
+  let active=true;setError('');setProducts(null);setSets(null);setPending(null);setFinishes(undefined);setCutouts(undefined);
   const products=createImageEditor({bundled,request}),setsAPI=createSetsEditor({defaults,request}),claims=createClaimsEditor({request});
   const fail=(e:unknown)=>{if(active)setError(e instanceof Error?e.message:'Could not load everything to do.');};
   everything<any>((after:any)=>products.list(after),'products').then(all=>{if(active)setProducts(all);},fail);
   setsAPI.load().then(({sets})=>{if(active)setSets(sets);},fail);
   everything<any>((after:any)=>claims.pending(after),'customers').then(all=>{if(active)setPending(all.reduce((sum,c)=>sum+(c.count??0),0));},fail);
   // The service's finish photo check; when it can't answer, the card is left out rather than guessed.
-  fetch(appServiceURL('/v1/catalogue/finish-photos')).then(r=>r.ok?r.json():null).catch(()=>null).then(result=>{if(active)setFinishes(result);});
+  readAppService('/v1/catalogue/finish-photos').then(result=>{if(active)setFinishes(finishPhotoCheck(result));});
   // The cut-outs built into the app count as done; when the service can't say, the card is left out.
   builtInCutouts().then((result:Record<string,string>|null)=>{if(active)setCutouts(result);});
   return ()=>{active=false;};
- },[]);
+ },[attempt]);
  const todos=buildTodos({products,sets,pending,finishes:finishes??null,cutouts:cutouts??null});
  const open=todos.filter(t=>t.count>0),done=todos.filter(t=>t.count===0);
- const loading=products==null||sets==null||pending==null||finishes===undefined||cutouts===undefined;
+ const loading=(!error&&(products==null||sets==null||pending==null))||finishes===undefined||cutouts===undefined;
+ const incomplete=products==null||sets==null||pending==null||finishes==null||cutouts==null;
  return <s-section heading="To do">
   <s-stack gap="large">
    {error?<s-banner tone="critical">{error}</s-banner>:null}
    <s-stack direction="inline" gap="small" alignItems="center">
     {loading?<s-spinner accessibilityLabel="Working out what needs doing"/>:null}
-    <s-text type="strong">{loading?'Working out what needs doing…':open.length?`${open.length} ${open.length===1?'thing':'things'} to do`:'All done. Nothing needs doing right now.'}</s-text>
+    <s-text type="strong">{loading?'Working out what needs doing…':incomplete?'Some checks are unavailable. Review the available tasks and retry.':open.length?`${open.length} ${open.length===1?'thing':'things'} to do`:'All done. Nothing needs doing right now.'}</s-text>
    </s-stack>
+   {!loading&&incomplete?<Button onClick={()=>setAttempt(value=>value+1)}>Retry checks</Button>:null}
    {open.length?<s-grid gridTemplateColumns="repeat(auto-fit, minmax(280px, 1fr))" gap="large">{open.map(t=><s-box key={t.id} padding="large" border="base" borderRadius="large">
     <s-stack gap="base">
      <s-heading>{t.title}</s-heading>

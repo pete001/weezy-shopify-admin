@@ -9,7 +9,7 @@ import {FinishPhotos} from './FinishPhotos';
 import {Cutout} from './Cutout';
 import {Overview,areas,type Area,tasks,Progress} from './Overview';
 import {productTodos,todoFilter,todoProgress,withBuiltInCutouts} from './todos.mjs';
-import {appServiceURL,builtInCutouts} from './app-service.mjs';
+import {readAppService,finishPhotoCheck,builtInCutouts} from './app-service.mjs';
 import {Collections} from './Collections';
 import {Ordering} from './Ordering';
 import {ProductPreview,SyncStatus} from './EditorTools';
@@ -56,7 +56,9 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   const [finishCheck,setFinishCheck]=useState<any>(null),[fixed,setFixed]=useState<string[]>([]);
   // The cut-outs built into the app, by handle (from the app service): a charm with one already has its cut-out.
   const [cutouts,setCutouts]=useState<Record<string,string>|null>(null);
-  useEffect(()=>{if(todo==='finish')void fetch(appServiceURL('/v1/catalogue/finish-photos')).then(r=>r.ok?r.json():null).catch(()=>null).then(setFinishCheck);},[todo]);
+  useEffect(()=>{let active=true;if(todo==='finish')void readAppService('/v1/catalogue/finish-photos').then(value=>{if(active)setFinishCheck(finishPhotoCheck(value));});return()=>{active=false;};},[todo]);
+  // Optional artwork enriches the list without holding product editing behind the app service.
+  useEffect(()=>{let active=true;void builtInCutouts().then(value=>{if(active)setCutouts(value);});return()=>{active=false;};},[]);
   const [selectedIDs,setSelectedIDs]=useState<string[]>([]),[bulkVisibility,setBulkVisibility]=useState('keep'),[bulkCategory,setBulkCategory]=useState('keep');
   const [bulkReviewPage,setBulkReviewPage]=useState(0);
   const [bulkBusy,setBulkBusy]=useState(false),[bulkPlan,setBulkPlan]=useState<any>(null),[bulkError,setBulkError]=useState(''),[bulkResult,setBulkResult]=useState<any>(null),[bulkProgress,setBulkProgress]=useState('');
@@ -64,8 +66,9 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   const blocked=opening||state.status==='loading'||!!state.error||bulkBusy||!!bulkPlan;
   const navigateBlocked=blocked||state.status==='saving'||draft;
   const needing:any[]=(finishCheck?.needing??[]).filter((p:any)=>!fixed.includes(p.id));
-  const matching:Item[]=filterProducts(items,{search,visibility,category,unreviewed}).filter(todo==='finish'?(p:Item)=>needing.some(n=>n.id===p.id):todo?todoFilter(todo):()=>true);
-  const progress=todo==='finish'?(finishCheck?{done:finishCheck.finishes-needing.reduce((n:number,p:any)=>n+p.missing.length,0),total:finishCheck.finishes,left:needing}:null):todo?todoProgress(todo,items):null;
+  const markedItems=withBuiltInCutouts(items,cutouts);
+  const matching:Item[]=filterProducts(markedItems,{search,visibility,category,unreviewed}).filter(todo==='finish'?(p:Item)=>needing.some(n=>n.id===p.id):todo?todoFilter(todo):()=>true);
+  const progress=todo==='finish'?(finishCheck?{done:finishCheck.finishes-needing.reduce((n:number,p:any)=>n+p.missing.length,0),total:finishCheck.finishes,left:needing}:null):todo?todoProgress(todo,markedItems):null;
   const index=matching.findIndex(p=>p.id===product?.id);
   const page=Math.min(listPage,Math.max(0,Math.ceil(matching.length/8)-1));
   const visibleItems=matching.slice(page*8,page*8+8);
@@ -90,7 +93,6 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         if(cursor&&seen.has(cursor))throw Error('Shopify could not finish loading products. Please retry.');
         if(cursor)seen.add(cursor);
       }while(cursor);
-      const built=await builtInCutouts();setCutouts(built);all=withBuiltInCutouts(all,built);
       setItems(all);const requested=new URL(window.location?.href??'https://app.invalid').searchParams.get('product');
       // A to-do opens on its first product still to do.
       const first=todo?all.find(todoFilter(todo)):all[0];
