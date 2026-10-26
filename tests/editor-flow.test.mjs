@@ -1,7 +1,11 @@
 import test, {after} from 'node:test';
 import {readFileSync} from 'node:fs';
+import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 const intervals=new Set();const interval=setInterval;globalThis.setInterval=(...args)=>{const timer=interval(...args);intervals.add(timer);return timer;};after(async()=>{await new Promise(r=>setTimeout(r,100));for(const timer of intervals)clearInterval(timer);});
-globalThis.fetch=async()=>({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
+// The app service: sync status, and Gamma's cut-out built into the app, named on another host as production does
+// (the editor shows its own service's copy) beside a handle that isn't one.
+const BUILT_IN=APP_SERVICE_URL+'/assets/cutouts/gamma.png';
+globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/finish-photos')?({ok:true,json:async()=>({finishes:1,missing:0,needing:[]})}):String(url).endsWith('/v1/catalogue/cutouts')?({ok:true,json:async()=>({builtIn:[{handle:'gamma',url:'https://another.invalid/assets/cutouts/gamma.png'},{handle:'../beta',url:'x'}]})}):({ok:true,json:async()=>({ready:true,products:{syncedAt:'2026-09-14T18:00:00Z',revisions:{}},sets:{syncedAt:'2026-09-14T18:00:00Z',digest:'initial'}})});
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {Window} from '@remote-dom/polyfill';
@@ -51,6 +55,13 @@ const text=()=>document.body.textContent;
 const by=(tag,label)=>nodes().find(n=>n.localName===tag&&(n.getAttribute('accessibilityLabel')===label||n.textContent===label));
 const click=(tag,label)=>{const n=by(tag,label);assert.ok(n,`Missing ${label}`);n.dispatchEvent(new Event('click'));};
 async function until(predicate){const start=Date.now();while(!predicate()){if(Date.now()-start>4000)throw Error(`UI did not settle: ${text().slice(0,1500)}`);await new Promise(r=>setTimeout(r,10));}}
+
+test('product editing loads while optional artwork is still unavailable',async()=>{
+ const original=globalThis.fetch;let unblock;
+ globalThis.fetch=async url=>String(url).endsWith('/v1/catalogue/cutouts')?new Promise(resolve=>{unblock=resolve;}):original(url);
+ try{extension.default();await until(()=>text().includes('Ready to review'));assert.ok(by('s-clickable','Open Beta'));}
+ finally{if(unblock)unblock({ok:true,json:async()=>({builtIn:[{handle:'gamma'}]})});globalThis.fetch=original;}
+});
 
 test('switching areas after loading/editing another product replaces all old content and retains saved data',async()=>{
  extension.default();await until(()=>text().includes('Ready to review'));
@@ -288,7 +299,7 @@ test('badge appearance offers pictured set members, validates custom colour and 
 test('the charm cut-out is a draft until saved, previews the link and stores only app metadata',async()=>{
  await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
  await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
- await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Charm cut-out for the set chain'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Charm cut-out')&&text().includes('No cut-out yet'));
  const field=()=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')==='Cut-out link from Shopify Files');
  const media=JSON.stringify(products[1].media),before=writes;
  field().value='https://example.com/beta.png';field().dispatchEvent(new Event('input'));
@@ -299,8 +310,8 @@ test('the charm cut-out is a draft until saved, previews the link and stores onl
  assert.equal(writes,before);assert.equal(await go('/order'),false);
  click('s-button','Save cut-out');await until(()=>text().includes('Cut-out saved')&&JSON.parse(products[1].appImages.value).appCutout===png);
  assert.ok(text().includes('Beta')&&text().includes(' · Cut-out'));
- click('s-button','Remove cut-out');await until(()=>text().includes('Unsaved cut-out'));click('s-button','Save · use the cover photo');
- await until(()=>text().includes('Using the cover photo')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
+ click('s-button','Remove cut-out');await until(()=>text().includes('Saving removes your cut-out'));click('s-button','Save · remove my cut-out');
+ await until(()=>text().includes('No cut-out yet')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
  assert.equal(JSON.stringify(products[1].media),media);
 });
 test('a to-do opens its list filtered to just what is left, with its progress and a way back to every product',async()=>{
@@ -315,3 +326,21 @@ test('a to-do opens its list filtered to just what is left, with its progress an
  products[2].appImages=saved;
 });
 
+test('a cut-out built into the app shows as the charm’s cut-out, with nothing to do',async()=>{
+ await go('/images');const gamma=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Gamma'));
+ await until(()=>gamma()&&!gamma().getAttribute('disabled')&&text().includes('Cut-out built into the app'));gamma().dispatchEvent(new Event('click'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Gamma')&&text().includes('Built into the app'));
+ assert.ok(text().includes('nothing to do here'));assert.ok(text().includes('Replace it with your own (optional)'));
+ assert.ok(nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===BUILT_IN));
+});
+
+test('the start page does not announce all done when optional service checks are unavailable',async t=>{
+ const oldProducts=structuredClone(products),oldSets=structuredClone(shop.appSets),oldPending=customer.pending,oldFetch=globalThis.fetch;
+ t.after(()=>{products.splice(0,products.length,...oldProducts);shop.appSets=oldSets;customer.pending=oldPending;globalThis.fetch=oldFetch;});
+ products.forEach(p=>{p.appImages={type:'json',compareDigest:'complete',value:JSON.stringify({version:1,images:[],appCategory:'charms',appStory:'Complete story.',appCutout:'https://cdn.shopify.com/s/files/1/complete.png'})};});
+ shop.appSets={type:'json',compareDigest:'complete',value:JSON.stringify({version:1,sets:[]})};customer.pending={value:'0'};
+ globalThis.fetch=async()=>{throw Error('Synthetic service outage');};
+ await go('/',false);await until(()=>nodes().some(n=>n.getAttribute?.('heading')==='All tools')&&!text().includes('Working out what needs doing'));
+ assert.ok(!text().includes('All done. Nothing needs doing right now.'),'Unavailable checks cannot certify completion');
+ assert.ok(text().includes('Some checks are unavailable'),'Partial results are explained');
+});
