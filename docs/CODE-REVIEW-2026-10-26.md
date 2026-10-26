@@ -41,3 +41,9 @@ Local evidence is retained under ignored `build/review-20261026`: unchanged-main
 The native app, live staff-save acceptance, deployed reader freshness, production-scale queue performance and a future Shopify release remain separate. No iPhone build, Fly deployment, Shopify permission change or customer-website change was made.
 
 Upstream context: [TypeScript7 announcement](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/), [Preact11.0.1 release](https://github.com/preactjs/preact/releases/tag/11.0.1). Local regression evidence determines this repository's merge decisions.
+
+## Verified outcome
+
+Review fixes merged as [PR15](https://github.com/pete001/weezy-shopify-admin/pull/15). Dependabot [7](https://github.com/pete001/weezy-shopify-admin/pull/7), [8](https://github.com/pete001/weezy-shopify-admin/pull/8) and [13](https://github.com/pete001/weezy-shopify-admin/pull/13) are merged after their branches were updated with the review fixes and fresh CI passed. [PR5](https://github.com/pete001/weezy-shopify-admin/pull/5) remains open.
+
+The actual combined main source `97f4cf70a67cea0c12c37f160cdba71465494253` was reinstalled and independently reverified:88/88 tests, zero failures/skips, strict typecheck and production build pass; npm audit0. [Detailed source, PR/check revisions and evidence hashes](CODE-REVIEW-2026-10-26.json). No live deployment occurred.

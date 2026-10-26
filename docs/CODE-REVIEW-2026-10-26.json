@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-26",
+  "repository": "pete001/weezy-shopify-admin",
+  "reviewedBase": "c5ea101dc0008be3811b4e36a4a91542e8f1e423",
+  "verifiedMergedSource": "97f4cf70a67cea0c12c37f160cdba71465494253",
+  "recentPRsReviewed": [
+    1,
+    2,
+    3,
+    9,
+    10,
+    11,
+    12,
+    14
+  ],
+  "reviewFixPR": 15,
+  "dependabotMerged": [
+    7,
+    8,
+    13
+  ],
+  "dependabotHeld": {
+    "number": 5,
+    "reason": "Preact11 allows navigation away from a visible cut-out draft in the existing regression test; reverting only Preact passes."
+  },
+  "prOutcomes": [
+    {
+      "headRefOid": "d83f4ec32bbceb9d0376ef61dac6089246c0333b",
+      "mergeCommit": {
+        "oid": "ebf9c1d86bba989e0d9bf3ea9fe566d9650aba1a"
+      },
+      "mergedAt": "2026-10-26T11:51:03Z",
+      "number": 15,
+      "state": "MERGED",
+      "url": "https://github.com/pete001/weezy-shopify-admin/pull/15"
+    },
+    {
+      "headRefOid": "d60ff1f4ad86eadf7aba982bab9b458f86ed230e",
+      "mergeCommit": {
+        "oid": "97f4cf70a67cea0c12c37f160cdba71465494253"
+      },
+      "mergedAt": "2026-10-26T11:52:42Z",
+      "number": 7,
+      "state": "MERGED",
+      "url": "https://github.com/pete001/weezy-shopify-admin/pull/7"
+    },
+    {
+      "headRefOid": "075c8a06f469d4a3141c0deb5cd44925db4c878e",
+      "mergeCommit": {
+        "oid": "665b7262119f9020c4e711577ac19bfd05263555"
+      },
+      "mergedAt": "2026-10-26T11:52:34Z",
+      "number": 8,
+      "state": "MERGED",
+      "url": "https://github.com/pete001/weezy-shopify-admin/pull/8"
+    },
+    {
+      "headRefOid": "6517c790665002bbb83f2d692b4929425e0af4ce",
+      "mergeCommit": {
+        "oid": "98e96fc2a140db77d7a7b64a2c79fcee4cf2b5a0"
+      },
+      "mergedAt": "2026-10-26T11:52:38Z",
+      "number": 13,
+      "state": "MERGED",
+      "url": "https://github.com/pete001/weezy-shopify-admin/pull/13"
+    },
+    {
+      "headRefOid": "c06482c4a87ed2830bd56e62bc1da9daf0b0eb43",
+      "mergeCommit": null,
+      "mergedAt": null,
+      "number": 5,
+      "state": "OPEN",
+      "url": "https://github.com/pete001/weezy-shopify-admin/pull/5"
+    }
+  ],
+  "testExecutions": 88,
+  "passed": 88,
+  "failed": 0,
+  "skipped": 0,
+  "typecheckPassed": true,
+  "productionBuildPassed": true,
+  "audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "dependencyVersions": {
+    "preact": "10.27.3",
+    "typescript": "7.0.2",
+    "@shopify/cli": "4.9.4",
+    "@shopify/ui-extensions": "2026.10.0",
+    "@preact/signals": "2.11.3",
+    "@remote-dom/polyfill": "1.6.0"
+  },
+  "ciBeforeMerge": {
+    "7": {
+      "head": "d60ff1f4ad86eadf7aba982bab9b458f86ed230e",
+      "status": "success",
+      "run": 40318133754
+    },
+    "8": {
+      "head": "075c8a06f469d4a3141c0deb5cd44925db4c878e",
+      "status": "success",
+      "run": 40318135763
+    },
+    "13": {
+      "head": "6517c790665002bbb83f2d692b4929425e0af4ce",
+      "status": "success",
+      "run": 40318139829
+    },
+    "15": {
+      "head": "d83f4ec32bbceb9d0376ef61dac6089246c0333b",
+      "status": "success",
+      "run": 40318005293
+    }
+  },
+  "receiptSHA256": {
+    "verify-baseline.log": "a8b4bdbf60e695eb91eac54ca5795b48e1a40e1a9dc3ae2657d29e9041b6be9b",
+    "regressions-before.log": "d085cadef53fed42d30ad7062bd0091791a10254fd7fb284527fc33bc77d6105",
+    "ui-before-confirmed-final.log": "241f7617bf8e64a715eb32e3f3d5d357fbdbff973cccbc485d2402016cedae72",
+    "verify-combined.log": "5a078111e8a2ad6a7285722025fd47d91a13009f0bd4fd7c44249ca69d13e6db",
+    "verify-without-preact11.log": "06923b1882bd7ef5d3dc74fa46f5f775fc70f0b3cbe7386d3d9dea1e8e1d0125",
+    "verify-combined-accepted.log": "30caeece71e84d1e0a859de9853d0d36c1b10e249f4ea7de6597b34e96221305",
+    "verify-fixed-current.log": "5c2dfd0a71e8e20a389d81d886b45daa7e0cc05e198535c12f10bc2694dee8bd",
+    "verify-merged-main.log": "a482c28e6024bbb1a668573d81a590de40b531b4a72d21f779a4e940a0620a38",
+    "audit-merged-main.json": "15b2bca5f6cd8a7af6abb35f5093f660191b37721998bd5a596809deb3191886"
+  },
+  "shopifyDeployed": false,
+  "liveDataMutated": false,
+  "customerWebsiteChanged": false,
+  "scopeLimit": "Admin source and synthetic workflows only; no native app/live service review or deployment acceptance inferred."
+}

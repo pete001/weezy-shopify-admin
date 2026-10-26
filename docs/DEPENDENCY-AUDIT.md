@@ -1,14 +1,9 @@
-# npm audit: what is open and why
+# Dependency audit · 26 October 2026
 
-Checked 12 October 2026 (`npm audit`, 10 open: 6 high, 4 moderate). None of them reaches Lou and Nat:
+The merged main branch passes all88 tests, strict typecheck and the production extension build. npm audit reports **0 vulnerabilities**. [Machine-readable audit](DEPENDENCY-AUDIT.json) · [Review and receipt hashes](CODE-REVIEW-2026-10-26.json). This is a point-in-time registry audit, not a guarantee that all dependency defects are known.
 
-| Package | Comes from | Why it is not in the editor |
-|---|---|---|
-| `@ts-morph/common`, `ts-morph`, `fast-glob`, `micromatch`, `braces` | `@shopify/ui-extensions` (its type-generation tooling) | Build-time only. The shipped bundle (`extensions/app-images/dist/weezy-app-images.js`, its map and metafile) contains none of them. |
-| `global-agent`, `roarr`, `sprintf-js` | `@shopify/cli` | The CLI runs on a developer's machine or CI to build and deploy; it is never part of the extension. |
+Dependabot7 (TypeScript7.0.2),8 (setup-node7.1) and13 (CLI4.9.4, UI extensions2026.10.0, signals2.11.3 and Remote DOM1.6.0) are merged after fresh CI and combined verification. This resolves the previously documented inherited audit findings without force-downgrading Shopify.
 
-All are denial-of-service issues triggered by attacker-controlled glob, brace or format input to developer tooling, which this repo never passes.
+Preact11/PR5 remains open: it breaks the existing cut-out draft navigation test. Retain10.27.3 until that migration preserves the guard. The controls tests use the existing esbuild bundler; the TypeScript7 update does not relax strictness or drop tests.
 
-`npm audit fix --force` would *downgrade* `@shopify/cli` (4.8 to 3.77) and `@shopify/ui-extensions` (2026.7 to 2025.8): do not run it. `brace-expansion` was updated with the safe `npm audit fix`.
-
-Dependabot security updates are on; when Shopify ships patched releases, take them through a normal PR. Re-check with `npm audit` and by grepping the built bundle for the package names.
+The12October audit is historical and remains in Git history. Keep CI without deployment credentials and run npm audit again for future dependency changes. A repository merge does not deploy the Shopify editor.

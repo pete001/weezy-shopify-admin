@@ -72,4 +72,4 @@ Create a feature branch, make the smallest admin change, run `npm run verify` an
 
 The same installed App Editor client ID and extension UID are retained, so an authorized deployment updates the existing app. Do not create a replacement app, increase scopes or deploy to any other app. [Deployment checklist](docs/DEPLOYMENT.md).
 
-[Dependency audit follow-up](docs/DEPENDENCIES.md): the inherited lockfile currently has11 audit findings. Production build/tests pass; no major Shopify downgrade was applied during extraction.
+[Current code review](docs/CODE-REVIEW-2026-10-26.md): all88 tests, strict typecheck and production build pass. Three Dependabot updates are merged; the [current audit](docs/DEPENDENCY-AUDIT.md) has0 findings. Preact11 remains held for its draft-navigation regression.
