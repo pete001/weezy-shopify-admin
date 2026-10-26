@@ -1,7 +1,5 @@
-# Dependency follow-up
+# Dependency status
 
-The extraction keeps the existing locked Shopify CLI4.8.0, UI extensions2026.7.0, Preact10.27.3 and TypeScript5.9 tooling. Installation, all68 tests, typecheck and extension production build pass.
+As of26October2026, the tested merged lockfile has **0 npm audit findings**. The inherited12October findings are resolved by the reviewed updates; see [the current audit](DEPENDENCY-AUDIT.md) and [full code review](CODE-REVIEW-2026-10-26.md).
 
-The current npm audit reports11 inherited findings:7 high and4 moderate, including transitive pattern-expansion/type-generation dependencies and CLI logging dependencies. These are real audit findings, not a zero-vulnerability claim. [Audit snapshot](DEPENDENCY-AUDIT.json). npm recommends major Shopify API/CLI downgrades for several affected chains; those would change the supported extension APIs and were not silently applied during extraction.
-
-Before a future editor deployment, investigate supported patched dependency versions/overrides in a separate tested PR. Keep untrusted input out of tooling and keep CI without credentials. Do not run npm audit fix --force or downgrade the Shopify API just to suppress the report. No live deployment is part of this repository migration.
+CLI4.9.4, UI extensions2026.10.0, signals2.11.3, Remote DOM1.6.0 and TypeScript7.0.2 are verified together. Preact remains10.27.3 because11 changes draft-navigation behaviour in the regression tests. All88 tests, strict typecheck and the production build pass. No forced Shopify downgrade, permission change or live deployment was performed.
