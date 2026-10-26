@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildTodos,todoProgress,todoFilter,checked} from '../extensions/app-images/src/todos.mjs';
+import {buildTodos,todoProgress,todoFilter,checked,withBuiltInCutouts} from '../extensions/app-images/src/todos.mjs';
 
 const charm=(id,extra={})=>({id,handle:id,title:id,reviewed:true,appHidden:false,appCategory:'charms',cutoutImageURL:null,appStory:null,...extra});
 const products=[
@@ -48,4 +48,13 @@ test('finish photos come from the service check, with its progress and when it r
 test('nothing loaded yet means nothing to show', () => {
  assert.deepEqual(buildTodos({}),[]);
  assert.deepEqual(buildTodos({pending:0}).map(t=>t.id),['purchases']);
+});
+
+test('a charm with a cut-out built into the app counts as done; without the service the card is left out',()=>{
+ const products=[charm('a'),charm('b'),charm('c',{cutoutImageURL:'https://cdn.shopify.com/s/files/c.png'})];
+ const todos=buildTodos({products,cutouts:{a:'https://service.invalid/assets/cutouts/a.png'}});
+ const cutout=todos.find(t=>t.id==='cutout');
+ assert.deepEqual([cutout.done,cutout.total,cutout.title],[2,3,'1 charm needs a cut-out']);
+ assert.equal(buildTodos({products,cutouts:null}).some(t=>t.id==='cutout'),false);
+ assert.deepEqual(withBuiltInCutouts(products,{b:'u'}).map(p=>p.builtInCutout),[null,'u',null]);
 });

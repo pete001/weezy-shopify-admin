@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import ts from 'typescript';
+import {transformSync} from 'esbuild';
 import {Window} from '@remote-dom/polyfill';
 
 Window.setGlobal(new Window());
 const {h,render}=await import('preact');
 const source=readFileSync(new URL('../extensions/app-images/src/Controls.tsx',import.meta.url),'utf8');
-const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText.replaceAll("from 'preact'",`from '${import.meta.resolve('preact')}'`);
+const js=transformSync(source,{loader:'tsx',target:'es2022',format:'esm'}).code.replace(/from ["']preact["']/g,`from '${import.meta.resolve('preact')}'`);
 const {Button,Clickable,TextField,SearchField,Checkbox}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
 
 test('remote controls added after initial render deliver repeated clicks to current handlers',()=>{
