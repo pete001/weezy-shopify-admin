@@ -23,8 +23,8 @@ import bundled from './bundled-heroes.json';
 import {createEditorSession} from './session.mjs';
 
 type Photo = {id:string;url:string;alt:string;hidden:boolean};
-type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string;cutoutImageURL?:string|null;builtInCutout?:string|null;appStory?:string|null};
-type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null};
+type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string;cutoutImageURL?:string|null;cutoutHeightMm?:number|null;builtInCutout?:string|null;appStory?:string|null};
+type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null;cutoutHeightMm:number|null};
 type State = {product:Product|null;status:string;error:string|null;notice:string|null};
 const api=createImageEditor({bundled,request:(query:string,variables:Record<string,unknown>)=>shopify.query(query,{variables})});
 const session=createEditorSession(api);
@@ -83,7 +83,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
   useEffect(()=>{if(todo==='finish'&&product&&product.variants.length&&product.variants.every(v=>finishPhoto(product,v).url))setFixed(old=>old.includes(product.id)?old:[...old,product.id]);},[todo,product]);
   onBlocked(navigateBlocked);
   useEffect(()=>{void loadList();},[]);
-  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory,cutoutImageURL:product.cutoutImageURL,appStory:product.appStory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory,product?.cutoutImageURL,product?.appStory]);
+  useEffect(()=>{if(product)setItems(old=>old.map(p=>p.id===product.id?{...p,reviewed:product.reviewed,appHidden:product.appHidden,appCategory:product.appCategory,cutoutImageURL:product.cutoutImageURL,cutoutHeightMm:product.cutoutHeightMm,appStory:product.appStory}:p));},[product?.id,product?.reviewed,product?.appHidden,product?.appCategory,product?.cutoutImageURL,product?.cutoutHeightMm,product?.appStory]);
   async function loadList(){
     setLoading(true);setListError('');
     try {
@@ -223,9 +223,9 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         </s-stack><s-stack gap="base"><s-box padding="base" border="base" borderRadius="large"><s-stack gap="base"><s-heading>Existing website description</s-heading><s-paragraph>{product.websiteDescription||'No website description recorded. Add approved app copy before launch.'}</s-paragraph><s-link href={product.shopifyURL}>Open product in Shopify</s-link></s-stack></s-box><s-box padding="base" border="base" borderRadius="large"><s-heading>App story preview</s-heading><s-paragraph>{story.trim()||product.websiteDescription||'This charm still needs a story.'}</s-paragraph></s-box></s-stack></s-grid>:null}
         <SyncStatus kind="products" handle={product.handle} digest={product.digest} dirty={state.status==='saving'||!!state.error||draft}/>
         {mode==='images'?<>
-        {todo!=='cutout'?<ProductPreview product={product}/>:null}
-        <Cutout key={product.id} product={product} builtInURL={cutouts?.[product.handle]??null} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}}/>
-        {todo==='cutout'?<ProductPreview product={product}/>:null}
+        {todo!=='cutout'&&todo!=='size'?<ProductPreview product={product}/>:null}
+        <Cutout key={product.id} product={product} builtInURL={cutouts?.[product.handle]??null} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}} onSaveSize={async mm=>{session.editListing({cutoutHeightMm:mm});return await session.flush();}}/>
+        {todo==='cutout'||todo==='size'?<ProductPreview product={product}/>:null}
         <s-paragraph>Click a photo to preview it. Use the labelled buttons to show, hide or reorder it. The first visible photo is the app cover.</s-paragraph>
         {state.notice?<s-banner tone="warning">{state.notice}</s-banner>:null}
         {!product.images.length?<s-banner tone="warning">This product has no images to review.</s-banner>:null}

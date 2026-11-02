@@ -12,6 +12,12 @@ export const cutoutURL = value => {
   const safe=typeof value==='string'&&value.length<=2048?imageURL(value.trim()):undefined;
   return safe&&/\.(png|webp)$/i.test(new URL(safe).pathname) ? safe : undefined;
 };
+// The charm's hanging height in mm, from the top of the connector to the bottom of the charm (Lou measures it).
+// The website's builder and the app draw the charm at this size against the 15″ paperclip chain (5 mm links).
+export const cutoutHeight = value => {
+  const n=typeof value==='string'&&value.trim()!==''?Number(value):value;
+  return typeof n==='number'&&Number.isFinite(n)&&n>=5&&n<=120 ? Math.round(n*10)/10 : undefined;
+};
 export const imageIdentity = value => { const safe=imageURL(value); return safe ? new URL(safe).pathname : null; };
 export function defaultHidden(url,alt='') {
   let filename;try{filename=decodeURIComponent(new URL(url).pathname.split('/').at(-1));}catch{filename=url;}
@@ -42,13 +48,14 @@ export function productImages(product,{heroURL}={}) {
 
 export const APP_CATEGORIES = ['charms','earrings','sets','accessories','chains'];
 export function readAppListing(field) {
-  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null};
+  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null,cutoutHeightMm:null};
   readImageSettings(field);
   const value=JSON.parse(field.value);
   if(value.appHidden!==undefined&&typeof value.appHidden!=='boolean' || value.appCategory!=null&&!APP_CATEGORIES.includes(value.appCategory)) throw Error('Invalid app product settings');
   if(value.appStory!=null&&(typeof value.appStory!=='string'||value.appStory.length>1800||!value.appStory.trim()))throw Error('Invalid app story');
   if(value.appCutout!=null&&cutoutURL(value.appCutout)!==value.appCutout)throw Error('Invalid app cutout');
-  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null};
+  if(value.appCutoutHeightMm!=null&&(typeof value.appCutoutHeightMm!=='number'||cutoutHeight(value.appCutoutHeightMm)!==value.appCutoutHeightMm))throw Error('Invalid charm size');
+  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null,cutoutHeightMm:value.appCutoutHeightMm??null};
 }
 export function defaultAppCategory(product) {
   const title=(product.title??'').toLowerCase(),type=(product.productType??'').toLowerCase();

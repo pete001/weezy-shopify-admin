@@ -1,12 +1,18 @@
 import {useEffect,useState} from 'preact/hooks';
 import {Button,TextField} from './Controls';
-import {cutoutURL} from '../../../contracts/app-image-settings.mjs';
-export type CutoutProduct={id:string;title:string;cutoutImageURL:string|null;images:{url:string;hidden:boolean}[]};
+import {cutoutURL,cutoutHeight} from '../../../contracts/app-image-settings.mjs';
+export type CutoutProduct={id:string;title:string;cutoutImageURL:string|null;cutoutHeightMm?:number|null;images:{url:string;hidden:boolean}[]};
 // The app hangs this transparent cut-out on the set chain, the share pictures and the moment after buying. It uses,
 // in turn: one saved here, the one built into the app (`builtInURL`, from the app service), the cover photo in a
 // round frame. The editor has no files scope, so staff paste a Shopify Files link.
-export function Cutout({product,builtInURL=null,disabled,onSave,onDraftChange}:{product:CutoutProduct;builtInURL?:string|null;disabled:boolean;onSave:(url:string|null)=>Promise<boolean>;onDraftChange:(dirty:boolean)=>void}){
+export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSize,onDraftChange}:{product:CutoutProduct;builtInURL?:string|null;disabled:boolean;onSave:(url:string|null)=>Promise<boolean>;onSaveSize:(mm:number|null)=>Promise<boolean>;onDraftChange:(dirty:boolean)=>void}){
  const [draft,setDraft]=useState(product.cutoutImageURL??''),[saving,setSaving]=useState(false);
+ // The charm's real size: its hanging height in mm. The website's builder and the app draw it at this size.
+ const savedSize=product.cutoutHeightMm!=null?String(product.cutoutHeightMm):'';
+ const [sizeDraft,setSizeDraft]=useState(savedSize),[savingSize,setSavingSize]=useState(false);
+ const sizeDirty=sizeDraft.trim()!==savedSize,sizeValid=!sizeDraft.trim()||cutoutHeight(sizeDraft)!==undefined;
+ function changeSize(value:string){setSizeDraft(value);onDraftChange(value.trim()!==savedSize||draft.trim()!==(product.cutoutImageURL??''));}
+ async function saveSize(){if(!sizeDirty||!sizeValid||disabled||savingSize)return;setSavingSize(true);try{if(await onSaveSize(sizeDraft.trim()?cutoutHeight(sizeDraft)??null:null))onDraftChange(false);}finally{setSavingSize(false);}}
  useEffect(()=>()=>onDraftChange(false),[]);
  const saved=product.cutoutImageURL??'',dirty=draft.trim()!==saved,valid=!draft.trim()||!!cutoutURL(draft),preview=cutoutURL(draft);
  const cover=product.images.find(p=>!p.hidden)?.url,blocked=disabled||saving;
@@ -24,6 +30,16 @@ export function Cutout({product,builtInURL=null,disabled,onSave,onDraftChange}:{
    <s-box padding="small" border="base" borderRadius="large" background="subdued">{now.img?<s-image src={now.img} alt={`${product.title}: what the app shows now`} aspectRatio="1" objectFit={saved||builtInURL?'contain':'cover'} borderRadius={saved||builtInURL?undefined:'large-200'}/>:<s-paragraph>No visible photo.</s-paragraph>}</s-box>
    <s-stack gap="small"><s-text type="strong">What the app shows now</s-text><s-badge tone={now.tone as any}>{now.badge}</s-badge><s-paragraph>{now.text}</s-paragraph></s-stack>
   </s-grid>
+  <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
+   <s-heading>Charm size</s-heading>
+   <s-paragraph>The charm’s hanging height: measure from the top of the connector to the bottom of the charm. The website’s builder and the app draw it at this size on the 15″ chain, so customers see how big it really is.</s-paragraph>
+   <s-stack direction="inline" gap="base" alignItems="end">
+    <TextField label="Hanging height (mm)" value={sizeDraft} disabled={disabled||savingSize} placeholder="e.g. 32" error={sizeValid?undefined:'Use a number of millimetres between 5 and 120.'} onInput={e=>changeSize(e.currentTarget.value)}/>
+    <Button variant="primary" loading={savingSize} disabled={!sizeDirty||!sizeValid||disabled||savingSize} onClick={saveSize}>{sizeDirty&&!sizeDraft.trim()?'Save · remove size':'Save size'}</Button>
+    {sizeDirty?<Button disabled={disabled||savingSize} onClick={()=>changeSize(savedSize)}>Cancel</Button>:null}
+   </s-stack>
+   {!sizeDirty&&!savedSize?<s-badge tone="warning">No size yet: drawn at a typical 32 mm</s-badge>:!sizeDirty?<s-badge tone="success">{`Saved: ${savedSize} mm`}</s-badge>:null}
+  </s-stack></s-box>
   <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
    <s-heading>{saved?'Change your cut-out':builtInURL?'Replace it with your own (optional)':'Add a cut-out'}</s-heading>
    <s-stack gap="small-200"><s-text type="strong">1. Upload the transparent PNG to Shopify Files</s-text><s-stack direction="inline"><Button href="shopify:admin/content/files">Open Shopify Files</Button></s-stack></s-stack>
