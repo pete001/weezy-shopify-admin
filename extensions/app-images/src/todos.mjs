@@ -7,6 +7,8 @@ import {setReadiness} from './workflows.mjs';
 export const productTodos={
  // A charm whose cut-out is built into the app (`builtInCutout`, from the app service) already has one.
  cutout:{area:'images',label:'charms that need a cut-out',applies:p=>!p.appHidden&&p.appCategory==='charms',needs:p=>!p.cutoutImageURL&&!p.builtInCutout},
+ // A charm with a cut-out (its own or built into the app) needs its hanging height to be drawn to scale.
+ size:{area:'images',label:'charms that need a size',applies:p=>!p.appHidden&&p.appCategory==='charms'&&!!(p.cutoutImageURL||p.builtInCutout),needs:p=>!p.cutoutHeightMm},
  story:{area:'stories',label:'charms that need a story',applies:p=>!p.appHidden&&p.appCategory==='charms',needs:p=>!p.appStory},
  review:{area:'catalogue',label:'products to check for the app',applies:()=>true,needs:p=>!p.reviewed},
 };
@@ -67,11 +69,12 @@ export function buildTodos({products=null,sets=null,pending=null,finishes=null,c
  }
  if(products!=null){
   const words={cutout:['charm needs a cut-out','charms need a cut-out','Every charm has a cut-out','These charms have no cut-out in the app yet, so the set chain, the share pictures and the moment after buying show their photo instead. Charms with a cut-out built into the app already count as done.','Add cut-outs'],
+   size:['charm needs a size','charms need a size','Every charm has its size','The website’s builder and the app draw each charm at its real size on the 15″ chain. Charms without a size are drawn at a typical 32 mm until it’s added.','Add sizes'],
    story:['charm needs a story','charms need a story','Every charm has its story','Without its own story a charm shows its website description in the app.','Write stories'],
    review:['product to check for the app','products to check for the app','Every product has been checked','Decide whether each product shows in the app and in which section.','Check products']};
   const marked=withBuiltInCutouts(products,cutouts);
-  for(const kind of ['cutout','story','review']){
-   if(kind==='cutout'&&cutouts==null)continue;
+  for(const kind of ['cutout','size','story','review']){
+   if((kind==='cutout'||kind==='size')&&cutouts==null)continue;
    const progress=todoProgress(kind,marked),[one,many,done,why,action]=words[kind];
    list.push({id:kind,href:`/${productTodos[kind].area}?todo=${kind}`,total:progress.total,done:progress.done,count:progress.left.length,
     title:progress.left.length?plural(progress.left.length,one,many):done,why,action});

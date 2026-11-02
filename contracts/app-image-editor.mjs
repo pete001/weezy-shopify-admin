@@ -1,4 +1,4 @@
-import {IMAGE_NAMESPACE,IMAGE_KEY,IMAGE_FIELD,IMAGE_MEDIA,productImages,imageURL,readAppListing,defaultAppCategory,APP_CATEGORIES,readAppVariantImages,cutoutURL} from './app-image-settings.mjs';
+import {IMAGE_NAMESPACE,IMAGE_KEY,IMAGE_FIELD,IMAGE_MEDIA,productImages,imageURL,readAppListing,defaultAppCategory,APP_CATEGORIES,readAppVariantImages,cutoutURL,cutoutHeight} from './app-image-settings.mjs';
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const fingerprint=p=>JSON.stringify(p.media?.nodes??[]);
 const selection=images=>images.map(({id,hidden})=>({id,hidden}));
@@ -58,7 +58,10 @@ export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
       const cutout=Object.hasOwn(input,'cutoutImageURL')?input.cutoutImageURL:current.cutoutImageURL;
       const appCutout=cutout===null||cutout===''?null:cutoutURL(cutout);
       if(appCutout===undefined)throw fail(400,'Paste the Shopify Files link of a PNG or WebP cut-out (it starts with https://cdn.shopify.com/s/files/).');
-      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{})});
+      const height=Object.hasOwn(input,'cutoutHeightMm')?input.cutoutHeightMm:current.cutoutHeightMm;
+      const appCutoutHeightMm=height===null||height===''?null:cutoutHeight(height);
+      if(appCutoutHeightMm===undefined)throw fail(400,'Enter the charm’s hanging height in mm, between 5 and 120.');
+      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{}),...(appCutoutHeightMm!=null?{appCutoutHeightMm}:{})});
       const data=await query('mutation SaveAppImages($metafields:[MetafieldsSetInput!]!){metafieldsSet(metafields:$metafields){metafields{namespace key value compareDigest updatedAt}userErrors{code message}}}',{
         metafields:[{ownerId:before.id,namespace:IMAGE_NAMESPACE,key:IMAGE_KEY,type:'json',value,compareDigest:input.digest}]
       });

@@ -23,16 +23,17 @@ test('a product to-do counts only what it covers: visible charms, not hidden one
 test('the To do list puts waiting customers first, links each to its filtered list and says when it is done', () => {
  const sets=[{id:'ok',name:'Ok',enabled:true,member_handles:['a','b','c']},{id:'short',name:'Short',enabled:true,member_handles:['a']},{id:'off',name:'Off',enabled:false,member_handles:[]}];
  const todos=buildTodos({products,sets,pending:2});
- assert.deepEqual(todos.map(t=>t.id),['purchases','sets','cutout','story','review']);
+ assert.deepEqual(todos.map(t=>t.id),['purchases','sets','cutout','size','story','review']);
  assert.equal(todos[0].title,'2 purchases waiting for review');
  assert.equal(todos[1].title,'1 set needs attention');
  assert.equal(todos[1].total,2);
  assert.equal(todos[2].title,'3 charms need a cut-out');
  assert.equal(todos[2].href,'/images?todo=cutout');
- assert.equal(todos[3].href,'/stories?todo=story');
- assert.equal(todos[4].title,'1 product to check for the app');
+ assert.equal(todos[3].href,'/images?todo=size');
+ assert.equal(todos[4].href,'/stories?todo=story');
+ assert.equal(todos[5].title,'1 product to check for the app');
  const done=buildTodos({products:[charm('a',{cutoutImageURL:'x',appStory:'y'})],sets:[],pending:0});
- assert.deepEqual(done.map(t=>[t.id,t.count]),[['purchases',0],['sets',0],['cutout',0],['story',0],['review',0]]);
+ assert.deepEqual(done.map(t=>[t.id,t.count]),[['purchases',0],['sets',0],['cutout',0],['size',1],['story',0],['review',0]]);
  assert.equal(done[2].title,'Every charm has a cut-out');
 });
 
@@ -57,4 +58,14 @@ test('a charm with a cut-out built into the app counts as done; without the serv
  assert.deepEqual([cutout.done,cutout.total,cutout.title],[2,3,'1 charm needs a cut-out']);
  assert.equal(buildTodos({products,cutouts:null}).some(t=>t.id==='cutout'),false);
  assert.deepEqual(withBuiltInCutouts(products,{b:'u'}).map(p=>p.builtInCutout),[null,'u',null]);
+});
+
+test('the size to-do covers visible charms with a cut-out (their own or built in) that have no size',()=>{
+ const products=[charm('a',{cutoutImageURL:'https://cdn.shopify.com/s/files/a.png'}),charm('b',{cutoutImageURL:'https://cdn.shopify.com/s/files/b.png',cutoutHeightMm:30}),charm('c'),charm('d'),charm('e',{appHidden:true,cutoutImageURL:'x'})];
+ const marked=withBuiltInCutouts(products,{d:'https://app.weezypop.com/assets/cutouts/d.png'});
+ const progress=todoProgress('size',marked);
+ assert.equal(progress.total,3);assert.equal(progress.done,1);assert.deepEqual(progress.left.map(p=>p.id),['a','d']);
+ const card=buildTodos({products,cutouts:{d:'https://app.weezypop.com/assets/cutouts/d.png'}}).find(t=>t.id==='size');
+ assert.equal(card.count,2);assert.equal(card.href,'/images?todo=size');assert.equal(card.title,'2 charms need a size');
+ assert.equal(buildTodos({products,cutouts:null}).some(t=>t.id==='size'),false);
 });

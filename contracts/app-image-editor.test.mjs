@@ -135,3 +135,24 @@ test('version 1 records without a cut-out stay readable and a malformed stored c
  assert.equal(readAppListing(field({appCutout:'https://cdn.shopify.com/s/files/1/moon.WEBP'})).cutoutImageURL,'https://cdn.shopify.com/s/files/1/moon.WEBP');
  for(const appCutout of ['https://cdn.shopify.com/s/files/1/moon.gif',' https://cdn.shopify.com/s/files/1/moon.png','javascript:alert(1)',{url:'x'}])assert.throws(()=>readAppListing(field({appCutout})),/cutout/);
 });
+test('a charm’s hanging height saves in mm (5 to 120, one decimal), survives other edits and can be removed',async()=>{
+ const h=harness();
+ let p=await h.api.get('123');assert.equal(p.cutoutHeightMm,null);
+ for(const bad of [4.9,121,'big',-3,Infinity,{mm:30}]){
+  const writes=h.calls.filter(c=>c.query.startsWith('mutation')).length;
+  await assert.rejects(h.api.save('123',{...p,cutoutHeightMm:bad}),{status:400});
+  assert.equal(h.calls.filter(c=>c.query.startsWith('mutation')).length,writes);
+ }
+ p=await h.api.save('123',{...p,cutoutHeightMm:'32.46'});assert.equal(p.cutoutHeightMm,32.5);
+ assert.equal(JSON.parse(h.product.appImages.value).appCutoutHeightMm,32.5);assert.equal(readAppListing(h.product.appImages).cutoutHeightMm,32.5);
+ const {cutoutHeightMm:_,...withoutField}=p;p=await h.api.save('123',{...withoutField,appCategory:'earrings'});assert.equal(p.cutoutHeightMm,32.5);
+ p=await h.api.save('123',{...p,cutoutImageURL:'https://cdn.shopify.com/s/files/1/moon.png'});assert.equal(p.cutoutHeightMm,32.5);
+ p=await h.api.save('123',{...p,cutoutHeightMm:null});assert.equal(p.cutoutHeightMm,null);assert.equal('appCutoutHeightMm' in JSON.parse(h.product.appImages.value),false);
+ assert.equal(p.cutoutImageURL,'https://cdn.shopify.com/s/files/1/moon.png');
+});
+test('records without a size stay readable and a malformed stored size fails closed',()=>{
+ const field=value=>({type:'json',value:JSON.stringify({version:1,images:[],...value})});
+ assert.equal(readAppListing(field({})).cutoutHeightMm,null);assert.equal(readAppListing(null).cutoutHeightMm,null);
+ assert.equal(readAppListing(field({appCutoutHeightMm:22})).cutoutHeightMm,22);
+ for(const appCutoutHeightMm of ['22',2,500,22.25,{mm:1}])assert.throws(()=>readAppListing(field({appCutoutHeightMm})),/size/);
+});
