@@ -23,6 +23,10 @@ Set membership is not a purchase or badge grant. Repeated members use quantity m
 
 Approval and manual-grant flows must validate the customer's Shopify identity and exact product/variant, then perform concurrency-protected writes and read them back. Approval atomically updates claims, pending count and grants. Pending/rejected/withdrawn claims do not create ownership; reviewed evidence is removed as the contract specifies. No order/payment/stock mutation is part of approval. Do not expose private photo proof or staff/receipt details in public projections.
 
+## Website set offer
+
+The `weezy-set-offer` Discount Function in `extensions/set-offer` (added 4 Nov 2026) is a second reader of Shop `charm_club.app_sets`, inside Shopify checkout. It reads `enabled`, `member_handles`, `member_quantities`, `member_variant_ids` and the `kind`/`chain_handle` of `complete_set_offer` or `free_chain_offer`, and checks them the same way `validateSets` does (a test compares the two on the live registry). It also reads the cart line properties `_charm_club_complete_group` and `_charm_club_complete_set` that the website theme sets on whole-set adds. Changing what those fields mean changes the website's prices too, and Shopify does not return a metafield value over 10,000 bytes to a function, so keep the serialised registry under that. [Set offer function](SET-OFFER-FUNCTION.md).
+
 ## The contract lives here
 
 The modules in `contracts/` are the executable definition of these fields. They are owned here, not copied from another project: weezy-app's app service takes its copy of the readers and validators from this repository. `catalogue-order.mjs` and `catalogue-sets.mjs` are the reader side, kept so the tests prove that what the editor writes is what the app reads. The auth provider is exercised with injected test responses and supplies no embedded token.

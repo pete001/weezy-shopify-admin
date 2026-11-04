@@ -16,6 +16,7 @@ Install Node24.19.0, then run `npm ci` and `npm run verify` from the repository 
 | Extension handle | `weezy-app-images` |
 | Extension UID | `612389a6-e8f4-c6cf-cc42-1d8e6ff7b347aaed6d1b` |
 | Target | `admin.app.home.render` |
+| Discount Function | handle `weezy-set-offer`, UID `6d31cdce-e93d-ee12-f740-6ba3c83bdc4052efa0e4`, target `cart.lines.discounts.generate.run`, Function API `2026-10` (added 4 Nov 2026, not yet deployed) |
 | API version | `2026-07` |
 | Scopes | `read_products,write_products,read_customers,write_customers` |
 | Authentication | Online staff-context direct Admin API |
@@ -31,6 +32,8 @@ These identifiers are public configuration, not passwords. No secrets are needed
 5. Run `npm run deploy` and record the actual accepted Shopify version. Review the proposed change before accepting any unexpected permissions or identity change.
 6. Reopen the existing staff app and check reads/navigation. Any live save must have separate merchant/customer authorization and a planned verification/restore.
 7. Verify the app service picks up the change (the sync status in the editor) and the app refreshes; an editor deploy never releases the iPhone app.
+
+The first deploy after 4 Nov 2026 also releases the `weezy-set-offer` Discount Function. It needs no new scope. It changes no prices until staff create an automatic discount from it; follow the launch steps in [SET-OFFER-FUNCTION.md](SET-OFFER-FUNCTION.md), including the Shopify Plus check for functions in custom apps.
 
 The editor itself runs inside Shopify; there is no server to deploy from this repository. The app service it reads status from is deployed from weezy-app.
 

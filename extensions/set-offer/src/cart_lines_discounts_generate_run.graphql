@@ -1,0 +1,44 @@
+# Keep under 3000 bytes and a calculated cost of 30 (Shopify Functions input query limits).
+# The set registry is the shop metafield the App Editor writes; values over 10,000 bytes are not returned.
+query CartInput {
+  presentmentCurrencyRate
+  discount {
+    discountClasses
+  }
+  shop {
+    appSets: metafield(namespace: "charm_club", key: "app_sets") {
+      jsonValue
+    }
+  }
+  cart {
+    cost {
+      subtotalAmount {
+        currencyCode
+      }
+    }
+    lines {
+      id
+      quantity
+      group: attribute(key: "_charm_club_complete_group") {
+        value
+      }
+      setId: attribute(key: "_charm_club_complete_set") {
+        value
+      }
+      cost {
+        amountPerQuantity {
+          amount
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            handle
+            justCharm: inAnyCollection(ids: ["gid://shopify/Collection/689200922962"])
+          }
+        }
+      }
+    }
+  }
+}

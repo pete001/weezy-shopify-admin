@@ -34,6 +34,8 @@ The preview opens at **http://127.0.0.1:48295**. Its changes are in memory and r
 | Review purchases | Approve or decline customer registrations of outside-app purchases |
 | Add outside purchases | Record or revoke verified staff-entered ownership for a customer |
 
+The app also carries one Shopify Discount Function, `weezy-set-offer`, which gives weezypop.com the app's complete-set deal (£10 off and a free chain; Terry de Havilland: free chain) and keeps £5 off every second loose charm. It reads the curated sets the editor writes. It does nothing until it is deployed and staff create an automatic discount from it: [set offer function](docs/SET-OFFER-FUNCTION.md).
+
 Staff open [Apps → Weezy Pop App Editor](https://admin.shopify.com/store/weezypopshop/apps/weezy-pop-app-editor) using their Shopify staff account. This is a Shopify-hosted `admin.app.home.render` extension. There is no separate admin password, Fly admin website or production server in this repository.
 
 ## How this connects to the app
@@ -56,6 +58,7 @@ Changes to existing metadata values reach the app after the app service's cache 
 
 ```text
 extensions/app-images/src/  Shopify UI, workflows and fallback content
+extensions/set-offer/       Discount Function for the website's set and charm offers (docs/SET-OFFER-FUNCTION.md)
 contracts/                 The charm_club metafield contract (validators, editors, readers) and its tests
 assets/                    Existing admin app icon and branding
 fixtures/                  Synthetic catalogue and synthetic proof image

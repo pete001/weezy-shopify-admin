@@ -1,0 +1,421 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "presentmentCurrencyRate": "1.0",
+      "discount": {
+        "discountClasses": [
+          "PRODUCT"
+        ]
+      },
+      "shop": {
+        "appSets": {
+          "jsonValue": {
+            "version": 1,
+            "sets": [
+              {
+                "badge_color": "#FFF09A",
+                "badge_hero_handle": "egg-on-toast-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "id": "app-set-231b9b28-4a5b-40f7-8838-5b3e6144970c",
+                "name": "Snack to the Future",
+                "member_handles": [
+                  "egg-on-toast-charm",
+                  "hot-sauce-charm",
+                  "burger-charm",
+                  "shrimp-charm",
+                  "croissant-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Snack to the Future",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#FAB7EB",
+                "badge_hero_handle": "battenberg-cake-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "id": "app-set-94879d0e-1eaf-48a6-91d4-01854b727b0f",
+                "name": "Sugar Rush Social Club",
+                "member_handles": [
+                  "croissant-charm",
+                  "battenberg-cake-charm",
+                  "cherry-charm",
+                  "ice-cream-charm",
+                  "jelly-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Sugar Rush Social Club",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#FFC392",
+                "badge_hero_handle": "lucky-horseshoe-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "member_variant_ids": {
+                  "smiley-charm": [
+                    "54746399703378",
+                    "54746399736146"
+                  ]
+                },
+                "id": "app-set-0e871430-e902-44c5-9240-d78b720a1490",
+                "name": "Rodeo Baby",
+                "member_handles": [
+                  "cowboy-boot-charm",
+                  "smiley-charm",
+                  "lucky-horseshoe-charm",
+                  "large-star-charm",
+                  "mini-diamond-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Rodeo Baby",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#B6A8F5",
+                "badge_hero_handle": "planet-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "id": "app-set-d7cc2955-62d7-4632-aed6-7c26748c3e3c",
+                "name": "Cosmic Crush",
+                "member_handles": [
+                  "moon-charm",
+                  "planet-charm",
+                  "large-star-charm",
+                  "thunder-bolt-charm",
+                  "sun-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Cosmic Crush",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#C9B6FF",
+                "badge_hero_handle": "sun-charm",
+                "member_quantities": {
+                  "swirl-charm": 2
+                },
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "member_variant_ids": {
+                  "swirl-charm": [
+                    "54746398785874"
+                  ]
+                },
+                "id": "app-set-aa3cb584-c244-43e4-9815-d05184179fb8",
+                "name": "Celestial Magic",
+                "member_handles": [
+                  "large-star-charm",
+                  "swirl-charm",
+                  "sun-charm",
+                  "moon-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Celestial Magic",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#FFBFCF",
+                "badge_hero_handle": "circus-tent-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "id": "app-set-fc873367-d1f9-4acf-a534-6ac790a7bb34",
+                "name": "Big Top Energy",
+                "member_handles": [
+                  "circus-tent-charm",
+                  "swirl-charm",
+                  "freak-charm",
+                  "large-star-charm",
+                  "poodle-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Big Top Energy",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#A9DAF0",
+                "badge_hero_handle": "roller-skate-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "member_variant_ids": {
+                  "smiley-charm": [
+                    "54746399637842",
+                    "54746399670610"
+                  ]
+                },
+                "id": "app-set-65c39cec-9d09-4218-a4f6-02953a504eb1",
+                "name": "Roller Disco",
+                "member_handles": [
+                  "roller-skate-charm",
+                  "thunder-bolt-charm",
+                  "bow-charm",
+                  "smiley-charm",
+                  "mini-diamond-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Roller Disco",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#BCE4CE",
+                "badge_hero_handle": "mini-thunder-bolt-charm",
+                "complete_set_offer": {
+                  "kind": "complete-set-10-chain",
+                  "discount_title": "APP SPECIAL — Complete Set",
+                  "chain_handle": "charm-necklace-chain"
+                },
+                "member_variant_ids": {
+                  "smiley-charm": [
+                    "54746399703378",
+                    "54746399736146"
+                  ]
+                },
+                "id": "app-set-52ffe870-3729-4dfe-8053-17be547d087f",
+                "name": "Festival Queen",
+                "member_handles": [
+                  "mini-thunder-bolt-charm",
+                  "cherry-charm",
+                  "cowboy-boot-charm",
+                  "circus-tent-charm",
+                  "smiley-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Festival Queen",
+                "badge_glyph": "V",
+                "enabled": true
+              },
+              {
+                "badge_color": "#EBCFA0",
+                "badge_hero_handle": "terry-de-havilland-x-weezy-pop-margaux-gold-wedge-charm",
+                "free_chain_offer": {
+                  "kind": "terry-free-chain",
+                  "discount_title": "Terry collection · Free multifunctional chain",
+                  "chain_handle": "multifunctional-paperclip-chain"
+                },
+                "id": "app-set-terry-de-havilland-shoe-collection",
+                "name": "Terry de Havilland Shoe Collection",
+                "member_handles": [
+                  "terry-de-havilland-x-weezy-pop-zia-rainbow-charm",
+                  "terry-de-havilland-x-weezy-pop-zia-platino-charm",
+                  "terry-de-havilland-x-weezy-pop-lillita-violet-pink-charm",
+                  "terry-de-havilland-x-weezy-pop-margaux-gold-wedge-charm",
+                  "terry-de-havilland-x-weezy-pop-margaux-silver-wedge-charm"
+                ],
+                "roman_ordinal": "V",
+                "badge_name": "Terry de Havilland Shoe Collection",
+                "badge_glyph": "V",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "cart": {
+        "cost": {
+          "subtotalAmount": {
+            "currencyCode": "GBP"
+          }
+        },
+        "lines": [
+          {
+            "id": "gid://shopify/CartLine/0",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "25.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/900000000",
+              "product": {
+                "handle": "terry-de-havilland-x-weezy-pop-zia-rainbow-charm",
+                "justCharm": true
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "25.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/900000001",
+              "product": {
+                "handle": "terry-de-havilland-x-weezy-pop-zia-platino-charm",
+                "justCharm": true
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/2",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "25.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/900000002",
+              "product": {
+                "handle": "terry-de-havilland-x-weezy-pop-lillita-violet-pink-charm",
+                "justCharm": true
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/3",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "25.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/900000003",
+              "product": {
+                "handle": "terry-de-havilland-x-weezy-pop-margaux-gold-wedge-charm",
+                "justCharm": true
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/4",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "25.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/900000004",
+              "product": {
+                "handle": "terry-de-havilland-x-weezy-pop-margaux-silver-wedge-charm",
+                "justCharm": true
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/5",
+            "quantity": 1,
+            "group": null,
+            "setId": null,
+            "cost": {
+              "amountPerQuantity": {
+                "amount": "18.0"
+              }
+            },
+            "merchandise": {
+              "id": "gid://shopify/ProductVariant/54012507717970",
+              "product": {
+                "handle": "multifunctional-paperclip-chain",
+                "justCharm": false
+              }
+            }
+          }
+        ]
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "productDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "£5 off your second charm",
+                "targets": [
+                  {
+                    "cartLine": {
+                      "id": "gid://shopify/CartLine/1"
+                    }
+                  }
+                ],
+                "value": {
+                  "fixedAmount": {
+                    "amount": "5.00",
+                    "appliesToEachItem": false
+                  }
+                }
+              },
+              {
+                "message": "£5 off your second charm",
+                "targets": [
+                  {
+                    "cartLine": {
+                      "id": "gid://shopify/CartLine/3"
+                    }
+                  }
+                ],
+                "value": {
+                  "fixedAmount": {
+                    "amount": "5.00",
+                    "appliesToEachItem": false
+                  }
+                }
+              },
+              {
+                "message": "Terry set: free chain",
+                "targets": [
+                  {
+                    "cartLine": {
+                      "id": "gid://shopify/CartLine/5"
+                    }
+                  }
+                ],
+                "value": {
+                  "percentage": {
+                    "value": "100"
+                  }
+                }
+              }
+            ],
+            "selectionStrategy": "ALL"
+          }
+        }
+      ]
+    }
+  }
+}
