@@ -25,7 +25,7 @@ Approval and manual-grant flows must validate the customer's Shopify identity an
 
 ## The contract lives here
 
-The modules in `contracts/` are the executable definition of these fields. They are owned here, not copied from another project: weezy-app's app service takes its copy of the readers and validators from this repository. `catalogue-order.mjs` and `catalogue-sets.mjs` are the reader side, kept so the tests prove that what the editor writes is what the app reads. The auth provider is exercised with injected test responses and supplies no embedded token.
+The modules in `contracts/` are the executable definition of these fields. They are owned here, not copied from another project: weezy-app's app service takes its copy of the readers and validators from this repository. `catalogue-order.mjs` and `catalogue-sets.mjs` are the reader side, kept so the tests prove that what the editor writes is what the app reads. Since 4 Nov 2026 the sets reader also attaches each set's Shopify Bundles product (`set-bundles.mjs`, "<set name> Set"), so the apps sell a set exactly as weezypop.com does; the bundle is Shopify data, not part of this contract. The auth provider is exercised with injected test responses and supplies no embedded token.
 
 To change a field: update the module and its tests here, keep version 1 records readable, record the change below, then ship the matching reader in weezy-app before deploying this editor.
 
