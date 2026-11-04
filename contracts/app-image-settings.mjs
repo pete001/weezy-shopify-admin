@@ -62,7 +62,7 @@ export function defaultAppCategory(product) {
   const groups=new Set((product.collections?.nodes??[]).map(c=>c.handle));
   if(['earring','huggie','hoop'].some(x=>title.includes(x))||type==='earrings')return 'earrings';
   if(title.endsWith('charm')||type==='charm')return 'charms';
-  if(['earrings','stud-earrings','personalised-earrings'].some(x=>groups.has(x)))return 'earrings';
+  if(['earrings','personalised-earrings'].some(x=>groups.has(x)))return 'earrings';
   if(['connector','clasp','extender'].some(x=>title.includes(x)))return 'accessories';
   if(/\bsets?\b/.test(title)||type==='sets')return 'sets';
   if(title.includes('chain')||type==='chains'||groups.has('charm-chains'))return 'chains';
