@@ -5,11 +5,14 @@ export type Photo={id:string;url:string;alt:string;hidden:boolean};
 export type FinishProduct={id:string;title:string;images:Photo[];variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>};
 export function FinishPhotos({product,disabled,onSave,onDraftChange}:{product:FinishProduct;disabled:boolean;onSave:(mapping:Record<string,string>)=>Promise<boolean>;onDraftChange:(dirty:boolean)=>void}){
  const [selected,setSelected]=useState(product.variants[0]?.id??''),[candidate,setCandidate]=useState<string|null>(null),[page,setPage]=useState(0),[finishPage,setFinishPage]=useState(0),[saving,setSaving]=useState(false);
- useEffect(()=>()=>onDraftChange(false),[]);
  function propose(id:string|null){onDraftChange(id!==null);setCandidate(id);}
  const variant=product.variants.find(v=>v.id===selected),current=finishPhoto(product,variant);
  const visible=product.images.filter(p=>!p.hidden),preview=candidate===''?finishPhoto({...product,appVariantImages:{}},variant):visible.find(p=>p.id===candidate);
  const website=finishPhoto({...product,appVariantImages:{}},variant),dirty=candidate!==null,blocked=disabled||saving;
+ // As in Cutout.tsx: the unsaved-changes guard follows the draft after every render (Preact 11 can remount
+ // the editor with the draft still on screen); leaving clears it.
+ useEffect(()=>{onDraftChange(dirty);});
+ useEffect(()=>()=>onDraftChange(false),[]);
  async function save(){if(!variant||candidate===null||blocked)return;setSaving(true);const mapping={...product.appVariantImages};if(candidate)mapping[variant.id]=candidate;else delete mapping[variant.id];try{if(await onSave(mapping))propose(null);}finally{setSaving(false);}}
  return <s-stack gap="large">
   <s-paragraph>Match each colour or finish to its photograph. Select a finish, compare photos, then save that match. These choices also appear in sets, wishlists and the basket.</s-paragraph>

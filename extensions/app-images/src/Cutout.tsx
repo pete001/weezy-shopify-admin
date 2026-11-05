@@ -13,9 +13,12 @@ export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSize,onDra
  const sizeDirty=sizeDraft.trim()!==savedSize,sizeValid=!sizeDraft.trim()||cutoutHeight(sizeDraft)!==undefined;
  function changeSize(value:string){setSizeDraft(value);onDraftChange(value.trim()!==savedSize||draft.trim()!==(product.cutoutImageURL??''));}
  async function saveSize(){if(!sizeDirty||!sizeValid||disabled||savingSize)return;setSavingSize(true);try{if(await onSaveSize(sizeDraft.trim()?cutoutHeight(sizeDraft)??null:null))onDraftChange(false);}finally{setSavingSize(false);}}
- useEffect(()=>()=>onDraftChange(false),[]);
  const saved=product.cutoutImageURL??'',dirty=draft.trim()!==saved,valid=!draft.trim()||!!cutoutURL(draft),preview=cutoutURL(draft);
  const cover=product.images.find(p=>!p.hidden)?.url,blocked=disabled||saving;
+ // The page's unsaved-changes guard follows the draft itself, after every render, so it stays right however
+ // the editor is mounted (Preact 11 can remount it while the draft is still on screen); leaving clears it.
+ useEffect(()=>{onDraftChange(dirty||sizeDirty);});
+ useEffect(()=>()=>onDraftChange(false),[]);
  function change(value:string){setDraft(value);onDraftChange(value.trim()!==saved);}
  async function save(){if(!dirty||!valid||blocked)return;setSaving(true);try{if(await onSave(draft.trim()?cutoutURL(draft)??null:null))onDraftChange(false);}finally{setSaving(false);}}
  // What the app shows today, from what's saved (not the draft).
