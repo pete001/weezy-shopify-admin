@@ -38,9 +38,12 @@ export function shortTitle(title){
  return head.length<3?full:head;
 }
 
-/** The questions a set's pieces ask on their own pages (APO), which the set asks once (theme
- *  snippets/wp-terry-set-add.liquid; Nat, 4 Nov: each shoe comes with its own three-piece adapter set, so
- *  Gold or Silver sets the chain and all five adapter sets). By handle: the directions each shoe comes in. */
+/** The way each Terry shoe's toe can point, which the set asks once (theme snippets/wp-terry-set-add.liquid; Nat,
+ *  4 Nov: each shoe comes with its own three-piece adapter set, so Gold or Silver sets the chain and all five
+ *  adapter sets). The source is the shoe's own product metafield custom.toe_directions (a list of "Left-facing" /
+ *  "Right-facing", which Lou and Nat set on the product in Shopify admin; the website reads the same field). Until
+ *  that metafield is filled in (needs a Shopify change: docs/SOURCE-OF-TRUTH.md), this copy of APO's
+ *  "Choose your direction" stands in, by handle. Delete it once every shoe has the metafield. */
 export const TOE_DIRECTIONS={
  'terry-de-havilland-x-weezy-pop-zia-rainbow-charm':['Right-facing'],
  'terry-de-havilland-x-weezy-pop-zia-platino-charm':['Left-facing'],
@@ -48,6 +51,15 @@ export const TOE_DIRECTIONS={
  'terry-de-havilland-x-weezy-pop-margaux-gold-wedge-charm':['Left-facing','Right-facing'],
  'terry-de-havilland-x-weezy-pop-margaux-silver-wedge-charm':['Left-facing','Right-facing'],
 };
+
+/** A list.single_line_text_field metafield's value ('["Left-facing","Right-facing"]') as up to 6 distinct
+ *  answers of at most 60 characters (Shopify's limits on a line property); anything else is no answer. */
+export function toeDirections(field){
+ let list;try{list=JSON.parse(field?.value??'null');}catch{return null;}
+ if(!Array.isArray(list))return null;
+ const options=[...new Set(list.filter(o=>typeof o==='string').map(o=>o.trim()).filter(o=>o&&o.length<=60))];
+ return options.length&&options.length<=6?options:null;
+}
 
 /** The bundle as the apps get it (APP-BUNDLES spec), or null when it can't be bought on the app storefront. */
 export function shapeBundle(set,product){
@@ -61,14 +73,18 @@ export function shapeBundle(set,product){
   finishes[finish]={variantID:String(v.id).split('/').at(-1),price:money(price),regular:money(regular),available:v.availableForSale===true,components:components.map(({price,...c})=>c)};
  }
  if(!Object.keys(finishes).length)return null;
- const bundle={handle:product.handle,productID:String(product.id).split('/').at(-1),finishes};
- // Pieces with questions of their own (the Terry shoes): titles from the components, as the website names them.
- const titles=new Map();for(const v of variants)for(const c of v.components?.nodes??[])if(c.productVariant?.product?.handle)titles.set(c.productVariant.product.handle,c.productVariant.product.title);
- const asked=set.member_handles.filter(h=>TOE_DIRECTIONS[h]&&titles.has(h));
+ const currency=variants.find(v=>v.price?.currencyCode)?.price?.currencyCode??'GBP';
+ const bundle={handle:product.handle,productID:String(product.id).split('/').at(-1),currency,finishes};
+ // Pieces with questions of their own (the Terry shoes): titles from the components, as the website names them,
+ // and their directions from each shoe's own metafield, else the stand-in above.
+ const titles=new Map(),directions=new Map();
+ for(const v of variants)for(const c of v.components?.nodes??[]){const p=c.productVariant?.product;if(!p?.handle)continue;titles.set(p.handle,p.title);
+  const own=toeDirections(p.toeDirections);if(own)directions.set(p.handle,own);else if(TOE_DIRECTIONS[p.handle]&&!directions.has(p.handle))directions.set(p.handle,TOE_DIRECTIONS[p.handle]);}
+ const asked=set.member_handles.filter(h=>directions.has(h)&&titles.has(h));
  if(asked.length){
   bundle.hardwareProperty='Hardware';
   const fixed={},questions=[];
-  for(const h of asked){const name=shortTitle(titles.get(h)),property=`${name} toe`,options=TOE_DIRECTIONS[h];
+  for(const h of asked){const name=shortTitle(titles.get(h)),property=`${name} toe`,options=directions.get(h);
    if(options.length===1)fixed[property]=options[0];else questions.push({property,label:`${name}: which way should the toe point?`,options:[...options]});}
   if(Object.keys(fixed).length)bundle.properties=fixed;
   if(questions.length)bundle.questions=questions;
@@ -76,16 +92,17 @@ export function shapeBundle(set,product){
  return bundle;
 }
 
-const PRODUCT_FIELDS='id handle availableForSale variants(first:20){nodes{id availableForSale price{amount currencyCode} selectedOptions{name value} components(first:30){nodes{quantity productVariant{id price{amount} product{handle title}}}}}}';
+const PRODUCT_FIELDS='id handle availableForSale variants(first:20){nodes{id availableForSale price{amount currencyCode} selectedOptions{name value} components(first:30){nodes{quantity productVariant{id price{amount} product{handle title toeDirections:metafield(namespace:"custom",key:"toe_directions"){value}}}}}}}';
 
-/** Reads every set's bundle in one Storefront query. Returns Map(set id → bundle or null), or throws. */
+/** Reads every set's bundle in one Storefront query, priced in `country` (markets.mjs; the UK unless told).
+ *  Returns Map(set id → bundle or null), or throws. */
 export function createSetBundles({token=process.env.SHOPIFY_STOREFRONT_PRIVATE_TOKEN,fetcher=fetch,shop='weezypopshop.myshopify.com'}={}){
- return async sets=>{
+ return async (sets,country='GB')=>{
   const result=new Map();
   if(!token||!sets?.length){for(const s of sets??[])result.set(s.id,null);return result;}
-  const query=`query AppSetBundles{${sets.map((s,i)=>`b${i}:product(handle:${JSON.stringify(bundleHandle(s))}){${PRODUCT_FIELDS}}`).join(' ')}}`;
+  const query=`query AppSetBundles($country:CountryCode!) @inContext(country:$country){${sets.map((s,i)=>`b${i}:product(handle:${JSON.stringify(bundleHandle(s))}){${PRODUCT_FIELDS}}`).join(' ')}}`;
   const r=await fetcher(`https://${shop}/api/2026-07/graphql.json`,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),
-   headers:{'Content-Type':'application/json','Shopify-Storefront-Private-Token':token},body:JSON.stringify({query})});
+   headers:{'Content-Type':'application/json','Shopify-Storefront-Private-Token':token},body:JSON.stringify({query,variables:{country}})});
   if(!r.ok)throw fail('Set bundles unavailable');
   const b=await r.json();if(b.errors?.length||!b.data)throw fail('Set bundles unavailable');
   sets.forEach((s,i)=>{let bundle=null;try{bundle=shapeBundle(s,b.data[`b${i}`]);}catch{bundle=null;}result.set(s.id,bundle);});
