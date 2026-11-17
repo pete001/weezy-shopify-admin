@@ -2,7 +2,7 @@
 // the blocks fetch, these decide. Tested in tests/account-reviews.test.mjs with synthetic orders.
 //
 // The blocks cannot know which pieces were already reviewed (that needs Judge.me's private API key and a server),
-// so the Orders page only offers pieces from orders fulfilled in the last REVIEW_WINDOW_DAYS days.
+// so the Orders page only offers pieces from orders placed in the last REVIEW_WINDOW_DAYS days and since fulfilled.
 
 export const REVIEW_WINDOW_DAYS = 60;
 export const MAX_PIECES = 6; // Orders page strip
@@ -113,7 +113,7 @@ const toPiece = (line, order) => ({
 const lines = (order) => order?.lineItems?.nodes || [];
 const processed = (order) => Date.parse(order?.processedAt ?? '');
 
-// The Orders page strip: pieces from orders fulfilled in the last 60 days, one per product (its newest order wins),
+// The Orders page strip: pieces from orders placed in the last 60 days and since fulfilled, one per product (its newest order wins),
 // newest first, at most six. Each one links to its order's page.
 export function pickPieces(orders, {now = Date.now(), days = REVIEW_WINDOW_DAYS, max = MAX_PIECES} = {}) {
   const since = now - days * 24 * 60 * 60 * 1000;

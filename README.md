@@ -42,7 +42,7 @@ The same app also carries a small customer-facing extension, `extensions/account
 
 | Target | Customers see |
 |---|---|
-| Orders page block (`customer-account.order-index.block.render`) | "Loving your new sparkle?": up to six pieces from orders fulfilled in the last 60 days, each with a REVIEW button to its order page |
+| Orders page block (`customer-account.order-index.block.render`) | "Loving your new sparkle?": up to six pieces from orders placed in the last 60 days and since fulfilled, each with a REVIEW button to its order page |
 | Order page block (`customer-account.order-status.block.render`) | "Your sparkle, your say" and the order's piece photos once the order is fulfilled, placed above Judge.me's "Write a new review" |
 
 All customer words are in `extensions/account-reviews/src/copy.mjs`; which pieces show is decided in `pieces.mjs` (gift cards, cancelled orders and the £0 product options helper lines are left out). It needs the `customer_read_orders` scope and protected customer data access, which take effect only on an authorized deploy; placing the blocks is a separate step in Shopify admin. [Post-deploy steps](docs/DEPLOYMENT.md#customer-account-review-blocks).

@@ -44,7 +44,7 @@ The `weezy-account-reviews` extension ships with the app on `npm run deploy`. De
 4. **Judge.me on the order cards.** In the same editor's Apps settings, show Judge.me's "Write a new review" as a secondary action next to "Buy again", and keep at most two actions per order card so it shows as a button, not in the ··· menu.
 5. Check both pages on a phone (390 px wide) with a test customer's fulfilled order.
 
-The blocks cannot know which pieces a customer has already reviewed: that needs Judge.me's private API key and a server, which this repository does not have. That is why the Orders page only offers pieces from orders fulfilled in the last 60 days. An order counts once Shopify calls it Fulfilled as a whole; partly fulfilled and cancelled orders are left out.
+The blocks cannot know which pieces a customer has already reviewed: that needs Judge.me's private API key and a server, which this repository does not have. That is why the Orders page only offers pieces from orders placed in the last 60 days and since fulfilled. An order counts once Shopify calls it Fulfilled as a whole; partly fulfilled and cancelled orders are left out.
 
 Each REVIEW button links to `shopify:customer-account/orders/<numeric order ID>`. Shopify's docs show `shopify:customer-account/orders` for the Orders page but no example for a single order, so check that a button opens the right order page after the first deploy.
 
