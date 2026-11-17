@@ -15,5 +15,8 @@
   "include": [
     "extensions/**/*.tsx",
     "extensions/**/*.ts"
+  ],
+  "exclude": [
+    "extensions/account-reviews"
   ]
 }

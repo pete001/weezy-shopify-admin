@@ -1,0 +1,9 @@
+{
+  "//": "Its own project: the customer account components declare the same s-* elements as the admin ones, so the two extensions are typechecked apart (npm run typecheck runs both).",
+  "extends": "../../tsconfig.json",
+  "include": [
+    "src/**/*.tsx",
+    "src/**/*.ts"
+  ],
+  "exclude": []
+}

@@ -13,3 +13,5 @@ build/
 *.db
 .DS_Store
 coverage/
+# Written by shopify app build for extensions with their own tsconfig
+extensions/*/shopify.d.ts

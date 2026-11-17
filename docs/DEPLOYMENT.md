@@ -17,7 +17,9 @@ Install Node24.19.0, then run `npm ci` and `npm run verify` from the repository 
 | Extension UID | `612389a6-e8f4-c6cf-cc42-1d8e6ff7b347aaed6d1b` |
 | Target | `admin.app.home.render` |
 | API version | `2026-07` |
-| Scopes | `read_products,write_products,read_customers,write_customers` |
+| Customer account extension | `weezy-account-reviews`, UID `56d88538-1336-4530-f00f-2041bb6da9b55097bd3c`, API version `2026-10` |
+| Customer account targets | `customer-account.order-index.block.render`, `customer-account.order-status.block.render` |
+| Scopes | `read_products,write_products,read_customers,write_customers,customer_read_orders` (`customer_read_orders` added for the review blocks; it takes effect on the next authorized deploy) |
 | Authentication | Online staff-context direct Admin API |
 
 These identifiers are public configuration, not passwords. No secrets are needed to build the extension. Shopify login is needed to deploy; private CLI session state must remain outside Git.
@@ -31,6 +33,20 @@ These identifiers are public configuration, not passwords. No secrets are needed
 5. Run `npm run deploy` and record the actual accepted Shopify version. Review the proposed change before accepting any unexpected permissions or identity change.
 6. Reopen the existing staff app and check reads/navigation. Any live save must have separate merchant/customer authorization and a planned verification/restore.
 7. Verify the app service picks up the change (the sync status in the editor) and the app refreshes; an editor deploy never releases the iPhone app.
+
+## Customer account review blocks
+
+The `weezy-account-reviews` extension ships with the app on `npm run deploy`. Deploying it, and each step below, needs Pete's go-ahead. Until the blocks are placed, customers see nothing.
+
+1. **Protected customer data.** In the Dev Dashboard for this app, request protected customer data access and tick the fields the blocks need: orders, Level 1 (no name, email, phone or address fields; the queries ask for none). The `customer_read_orders` scope arrives with the deploy and the store accepts it when prompted.
+2. **Orders page.** Shopify admin, Settings > Checkout and accounts > Customize, Orders page: add the **Account reviews** app block above the order list.
+3. **Order status page.** In the same editor, Order status page: add our **Account reviews** block above Judge.me's "Write a new review" block (Judge.me's primary placement, under the order summary).
+4. **Judge.me on the order cards.** In the same editor's Apps settings, show Judge.me's "Write a new review" as a secondary action next to "Buy again", and keep at most two actions per order card so it shows as a button, not in the ··· menu.
+5. Check both pages on a phone (390 px wide) with a test customer's fulfilled order.
+
+The blocks cannot know which pieces a customer has already reviewed: that needs Judge.me's private API key and a server, which this repository does not have. That is why the Orders page only offers pieces from orders fulfilled in the last 60 days. An order counts once Shopify calls it Fulfilled as a whole; partly fulfilled and cancelled orders are left out.
+
+Each REVIEW button links to `shopify:customer-account/orders/<numeric order ID>`. Shopify's docs show `shopify:customer-account/orders` for the Orders page but no example for a single order, so check that a button opens the right order page after the first deploy.
 
 The editor itself runs inside Shopify; there is no server to deploy from this repository. The app service it reads status from is deployed from weezy-app.
 
