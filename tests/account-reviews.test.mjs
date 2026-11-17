@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {copy} from '../extensions/account-reviews/src/copy.mjs';
-import {pickPieces,pickUnreviewed,stripPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES,MAX_UNREVIEWED,GRID_COLUMNS} from '../extensions/account-reviews/src/pieces.mjs';
+import {pickPieces,pickUnreviewed,stripPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,ordersBlockView,SHOP_URL,REVIEW_AFTER_DAYS,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES,MAX_UNREVIEWED,GRID_COLUMNS} from '../extensions/account-reviews/src/pieces.mjs';
 import {loadReviewed,reviewedSet,REVIEWED_URL,REVIEWED_TIMEOUT_MS} from '../extensions/account-reviews/src/reviewed.mjs';
 import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 
@@ -11,8 +11,24 @@ const now=Date.parse('2026-11-17T12:00:00Z');
 const daysAgo=d=>new Date(now-d*24*60*60*1000).toISOString();
 const line=(product,extra={})=>({productId:`gid://shopify/Product/${product}`,name:`Piece ${product}`,variantTitle:null,productType:'Charm',giftCard:false,totalPrice:{amount:'12.0'},image:{url:`https://cdn.shopify.com/s/files/synthetic/${product}.jpg`,altText:null},...extra});
 const order=(id,days,items,extra={})=>({id:`gid://shopify/Order/${id}`,processedAt:daysAgo(days),cancelledAt:null,fulfillmentStatus:'FULFILLED',lineItems:{nodes:items},...extra});
+const gid=p=>`gid://shopify/Product/${p}`;
+const ids=pieces=>pieces.map(p=>p.productId.split('/').pop());
 
-test('only fulfilled, uncancelled orders from the last 60 days count', () => {
+test('an order counts once fulfilled, or 14 days after it was placed; cancelled never', () => {
+  assert.equal(REVIEW_AFTER_DAYS,14);
+  assert.equal(isReviewable(order(1,0,[]),now),true,'fulfilled today');
+  assert.equal(isReviewable(order(1,14,[],{fulfillmentStatus:'UNFULFILLED'}),now),true,'unfulfilled, 14 days');
+  assert.equal(isReviewable(order(1,13,[],{fulfillmentStatus:'UNFULFILLED'}),now),false,'unfulfilled, 13 days');
+  assert.equal(isReviewable(order(1,13.99,[],{fulfillmentStatus:'UNFULFILLED'}),now),false,'unfulfilled, just under 14 days');
+  assert.equal(isReviewable(order(1,20,[],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),now),true,'partly fulfilled, 20 days');
+  assert.equal(isReviewable(order(1,3,[],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),now),false,'partly fulfilled, 3 days');
+  assert.equal(isReviewable(order(1,30,[],{fulfillmentStatus:'UNFULFILLED',processedAt:null}),now),false,'no placed date');
+  for(const status of ['FULFILLED','UNFULFILLED'])for(const days of [1,13,14,90])assert.equal(isReviewable(order(1,days,[],{fulfillmentStatus:status,cancelledAt:daysAgo(0)}),now),false,`cancelled ${status} ${days}`);
+  assert.equal(isReviewable(null),false);
+  assert.equal(isReviewable(order(1,14,[],{fulfillmentStatus:'UNFULFILLED'})),true,'now defaults to the clock');
+});
+
+test('fallback: counted, uncancelled orders from the last 60 days', () => {
   const orders=[
     order(1,5,[line(1)]),
     order(2,3,[line(2)],{fulfillmentStatus:'UNFULFILLED'}),
@@ -21,12 +37,13 @@ test('only fulfilled, uncancelled orders from the last 60 days count', () => {
     order(5,2,[line(5)],{cancelledAt:daysAgo(1)}),
     order(6,61,[line(6)]),
     order(7,59,[line(7)]),
+    order(8,30,[line(8)],{fulfillmentStatus:'UNFULFILLED'}),
+    order(9,13,[line(9)],{fulfillmentStatus:'UNFULFILLED'}),
   ];
-  assert.deepEqual(pickPieces(orders,{now}).map(p=>p.productId),['gid://shopify/Product/1','gid://shopify/Product/7']);
-  assert.equal(isReviewable(null),false);
+  assert.deepEqual(ids(pickPieces(orders,{now})),['1','8','7']);
 });
 
-test('gift cards, £0 helper lines and custom lines are not pieces', () => {
+test('gift cards, helper lines and custom lines are not pieces; free pieces are', () => {
   const items=[
     line(1),
     line(2,{giftCard:true}),
@@ -35,8 +52,11 @@ test('gift cards, £0 helper lines and custom lines are not pieces', () => {
     line(5,{totalPrice:{amount:'0.0'}}),
     line(6,{productId:null}),
     line(7,{totalPrice:null}),
+    line(8,{productType:' MWS_APO_GENERATED ',totalPrice:{amount:'0.0'}}),
+    line(9,{name:'  __Option-Fee'}),
   ];
-  assert.deepEqual(pickPieces([order(1,1,items)],{now}).map(p=>p.productId),['gid://shopify/Product/1','gid://shopify/Product/7']);
+  assert.deepEqual(ids(pickPieces([order(1,1,items)],{now})),['1','5','7']);
+  assert.equal(isPiece(line(5,{totalPrice:{amount:'0.00'}})),true,'a £0 piece (a gift, a replacement, a free chain) counts');
   assert.equal(isPiece(undefined),false);
 });
 
@@ -70,11 +90,14 @@ test('the order link uses the numeric order ID and refuses anything else', () =>
   assert.deepEqual(pickPieces([order('x',1,[line(1)],{id:'not-a-gid'})],{now}),[]);
 });
 
-test('the order page shows its pieces only once the whole order is fulfilled', () => {
-  const items=[line(1),line(2,{giftCard:true}),line(1),line(3,{productType:'mws_apo_generated'}),line(4)];
-  assert.deepEqual(orderPieces(order(7,90,items)).map(p=>p.productId.split('/').pop()),['1','4']);
-  assert.deepEqual(orderPieces(order(7,1,items,{fulfillmentStatus:'PARTIALLY_FULFILLED'})),[]);
-  assert.deepEqual(orderPieces(order(7,1,items,{cancelledAt:daysAgo(0)})),[]);
+test('the order page shows its pieces once the order counts: fulfilled, or placed 14 days ago', () => {
+  const items=[line(1),line(2,{giftCard:true}),line(1),line(3,{productType:'mws_apo_generated'}),line(4),line(5,{totalPrice:{amount:'0.0'}})];
+  assert.deepEqual(ids(orderPieces(order(7,90,items),{now})),['1','4','5']);
+  assert.deepEqual(orderPieces(order(7,1,items,{fulfillmentStatus:'PARTIALLY_FULFILLED'}),{now}),[]);
+  assert.deepEqual(orderPieces(order(7,13,items,{fulfillmentStatus:'UNFULFILLED'}),{now}),[]);
+  assert.deepEqual(ids(orderPieces(order(7,14,items,{fulfillmentStatus:'UNFULFILLED'}),{now})),['1','4','5']);
+  assert.deepEqual(orderPieces(order(7,1,items,{cancelledAt:daysAgo(0)}),{now}),[]);
+  assert.deepEqual(orderPieces(order(7,90,items,{fulfillmentStatus:'UNFULFILLED',cancelledAt:daysAgo(80)}),{now}),[]);
   assert.deepEqual(orderPieces(null),[]);
   assert.equal(orderPieces(order(8,1,Array.from({length:20},(_,i)=>line(i)))).length,12);
 });
@@ -84,6 +107,8 @@ test('queries ask only for what the blocks use: no names, emails or addresses', 
     assert.doesNotMatch(query,/email|address|firstName|lastName|phone|customer\s*\{[^}]*displayName/i);
     assert.match(query,/fulfillmentStatus/);
     assert.match(query,/cancelledAt/);
+    assert.match(query,/processedAt/,'the 14-day rule needs the placed date');
+    assert.doesNotMatch(query,/totalPrice/,'prices no longer decide anything');
   }
   assert.match(RECENT_ORDERS_QUERY,/orders\(first: \$first, sortKey: PROCESSED_AT, reverse: true\)/);
 });
@@ -132,22 +157,22 @@ test('the Orders strip columns are one container query with comma-free values, a
   assert.match(source,/gridTemplateColumns=\{GRID_COLUMNS\}/);
 });
 
-const gid=p=>`gid://shopify/Product/${p}`;
-const ids=pieces=>pieces.map(p=>p.productId.split('/').pop());
-
-test('with the reviewed set: every fulfilled piece not yet reviewed, any date, newest first, one per product', () => {
+test('with the reviewed set: every counted piece not yet reviewed, any date, newest first, one per product', () => {
   const orders=[
     order(1,400,[line(1),line(2)]),
     order(2,5,[line(3),line(1)]),
     order(3,3,[line(4)],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),
     order(4,2,[line(5)],{cancelledAt:daysAgo(1)}),
     order(5,90,[line(6),line(7,{giftCard:true}),line(8,{productType:'mws_apo_generated'})]),
+    order(6,200,[line(9,{totalPrice:{amount:'0.0'}})],{fulfillmentStatus:'UNFULFILLED'}),
+    order(7,13,[line(10)],{fulfillmentStatus:'UNFULFILLED'}),
+    order(8,300,[line(11)],{fulfillmentStatus:'UNFULFILLED',cancelledAt:daysAgo(299)}),
   ];
-  const {pieces,more}=pickUnreviewed(orders,new Set([gid(3)]));
-  assert.deepEqual(ids(pieces),['1','6','2']);
+  const {pieces,more}=pickUnreviewed(orders,new Set([gid(3)]),{now});
+  assert.deepEqual(ids(pieces),['1','6','9','2'],'an unfulfilled £0 order from 200 days ago counts; 13 days and cancelled do not');
   assert.equal(pieces[0].href,'shopify:customer-account/orders/2','the newest order wins');
   assert.equal(more,0);
-  assert.deepEqual(pickUnreviewed(orders,new Set([gid(1),gid(2),gid(3),gid(6)])),{pieces:[],more:0},'nothing left to review');
+  assert.deepEqual(pickUnreviewed(orders,new Set([gid(1),gid(2),gid(3),gid(6),gid(9)]),{now}),{pieces:[],more:0},'nothing left to review');
   assert.deepEqual(pickUnreviewed(undefined,new Set()),{pieces:[],more:0});
   assert.deepEqual(ids(pickUnreviewed([order(9,1,[line(1)],{processedAt:null}),order(10,1,[line(2)])],new Set()).pieces),['2','1'],'a missing date sorts last');
 });
@@ -234,4 +259,38 @@ test('the reviewed fetch gives up after its timeout and aborts the request', asy
   assert.ok(Date.now()-started<1000);
   assert.equal(signal.aborted,true);
   assert.equal(await loadReviewed({fetchImpl:hang,getToken:()=>new Promise(()=>{}),timeoutMs:30}),null,'a token that never comes');
+});
+
+test('a customer\'s only order, unfulfilled and £0, shows on the Orders page after 14 days', () => {
+  const only=[order(1,20,[line('gift',{totalPrice:{amount:'0.0'}}),line('fee',{name:'__Customized-Items',productType:'mws_apo_generated',totalPrice:{amount:'0.0'}})],{fulfillmentStatus:'UNFULFILLED'})];
+  assert.deepEqual(ids(stripPieces(only,new Set(),{now}).pieces),['gift']);
+  assert.deepEqual(ids(stripPieces(only,null,{now}).pieces),['gift'],'the fallback too');
+  assert.deepEqual(ids(orderPieces(only[0],{now})),['gift'],'and on its order page');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces(only,new Set(),{now})}),'strip');
+});
+
+test('the Orders block: pieces give the strip, none give the welcome, an orders error or loading gives nothing', () => {
+  const piece={productId:gid(1)};
+  assert.equal(ordersBlockView({status:'ready',strip:{pieces:[piece],more:0}}),'strip');
+  assert.equal(ordersBlockView({status:'ready',strip:{pieces:[],more:0}}),'welcome');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces([],new Set(),{now})}),'welcome','no orders at all');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces(undefined,null,{now})}),'welcome','no orders list');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces([order(1,1,[line(1)])],new Set([gid(1)]),{now})}),'welcome','everything reviewed');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces([order(1,3,[line(1)],{fulfillmentStatus:'UNFULFILLED'})],new Set(),{now})}),'welcome','an order too new to count');
+  assert.equal(ordersBlockView({status:'failed'}),null);
+  assert.equal(ordersBlockView({status:'loading'}),null);
+  assert.equal(ordersBlockView(null),null);
+  assert.equal(ordersBlockView(undefined),null);
+});
+
+test('the welcome: approved lines from copy.mjs and one button to the shop, its target left at auto', () => {
+  assert.deepEqual(copy.welcome,{eyebrow:'✦ YOUR WEEZY POP',heading:'Snap, Stack, Style.',body:'Start with one charm, or stack loads and go full maximalist.',button:'SHOP NOW'});
+  assert.equal(SHOP_URL,'https://weezypop.com/');
+  const source=readFileSync(new URL('../extensions/account-reviews/src/OrdersStrip.tsx',import.meta.url),'utf8');
+  assert.match(source,/<s-button href=\{SHOP_URL\}[^>]*>\{copy\.welcome\.button\}<\/s-button>/);
+  assert.doesNotMatch(source,/target=/,'the target stays at its default, auto');
+  assert.match(source,/\.catch\(\(\)=>\{if\(live\)setState\(\{status:'failed'\}\);\}\)/,'an orders error is "failed", never "ready"');
+  assert.match(source,/useState<OrdersState>\(\{status:'loading'\}\)/);
+  const header=readFileSync(new URL('../extensions/account-reviews/src/OrderHeader.tsx',import.meta.url),'utf8');
+  assert.doesNotMatch(header,/copy\.welcome|SHOP_URL/,'the order page has no welcome');
 });

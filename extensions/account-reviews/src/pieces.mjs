@@ -1,11 +1,18 @@
 // Which pieces the account review blocks show, worked out from the customer's own orders. Pure functions only:
 // the blocks fetch, these decide. Tested in tests/account-reviews.test.mjs with synthetic orders.
 //
+// An order counts once Shopify calls it Fulfilled, or once it was placed REVIEW_AFTER_DAYS days ago or more: Weezy Pop
+// hands some orders over in person or at markets and never marks them fulfilled. Cancelled orders never count.
+//
 // Which products the customer already reviewed comes from the app service (reviewed.mjs), which asks Judge.me with
-// its private key. With that set, the Orders page offers every delivered piece not yet reviewed. When the set cannot
-// be had (the service is down, slow or answers oddly), it falls back to pieces from orders placed in the last
-// REVIEW_WINDOW_DAYS days and since fulfilled, at most MAX_PIECES, as it did before the service could answer.
+// its private key. With that set, the Orders page offers every piece from counted orders not yet reviewed. When the
+// set cannot be had (the service is down, slow or answers oddly), it falls back to pieces from counted orders placed in
+// the last REVIEW_WINDOW_DAYS days, at most MAX_PIECES, as it did before the service could answer.
+//
+// When the orders answer but nothing is left to review (no orders at all included), the Orders page shows a welcome
+// with a button to the shop instead (ordersBlockView). The order page shows nothing then.
 
+export const REVIEW_AFTER_DAYS = 14; // an order not marked fulfilled counts this many days after it was placed
 export const REVIEW_WINDOW_DAYS = 60; // fallback only
 export const MAX_PIECES = 6; // Orders page strip, fallback only
 export const MAX_UNREVIEWED = 12; // Orders page strip, with the reviewed set
@@ -29,7 +36,6 @@ const LINE_FIELDS = `productId
           variantTitle
           productType
           giftCard
-          totalPrice { amount }
           image { url(transform: {maxWidth: 400, maxHeight: 400}) altText }`;
 
 export const RECENT_ORDERS_QUERY = `query RecentOrdersForReview($first: Int!) {
@@ -53,6 +59,7 @@ export const RECENT_ORDERS_QUERY = `query RecentOrdersForReview($first: Int!) {
 export const ORDER_QUERY = `query OrderForReview($id: ID!) {
   order(id: $id) {
     id
+    processedAt
     cancelledAt
     fulfillmentStatus
     lineItems(first: 50) {
@@ -77,18 +84,27 @@ export async function customerAccountQuery(fetchImpl, query, variables) {
   return json.data;
 }
 
-// Only whole orders Shopify calls Fulfilled, and never cancelled ones. Judge.me offers its verified review form on
-// fulfilled orders, so a partly fulfilled order waits until the rest has shipped.
-export const isReviewable = (order) => !!order && order.fulfillmentStatus === 'FULFILLED' && !order.cancelledAt;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const processed = (order) => Date.parse(order?.processedAt ?? '');
 
-// Lines that are not pieces a customer could review: gift cards, custom lines with no product, and the £0 helper
-// lines the product options app adds (product type mws_apo_generated, names like "__Customized-Items").
+// Never a cancelled order. Otherwise a whole order Shopify calls Fulfilled, or any order placed REVIEW_AFTER_DAYS days
+// ago or more, fulfilled or not (handed over in person, at a market, or still partly shipped). An order with no
+// placed date counts only once fulfilled.
+/** @param {any} order @param {number} [now] */
+export function isReviewable(order, now = Date.now()) {
+  if (!order || order.cancelledAt) return false;
+  if (order.fulfillmentStatus === 'FULFILLED') return true;
+  const placed = processed(order);
+  return Number.isFinite(placed) && placed <= now - REVIEW_AFTER_DAYS * DAY_MS;
+}
+
+// Lines that are not pieces a customer could review: gift cards, custom lines with no product, and the helper lines
+// the product options app adds (product type mws_apo_generated, names like "__Customized-Items"). Free pieces (a gift,
+// a replacement, a set's free chain) are pieces.
 export function isPiece(line) {
   if (!line || !line.productId || line.giftCard) return false;
   if ((line.productType || '').trim().toLowerCase() === 'mws_apo_generated') return false;
   if ((line.name || '').trim().startsWith('__')) return false;
-  const amount = line.totalPrice?.amount;
-  if (amount !== undefined && amount !== null && Number(amount) === 0) return false;
   return true;
 }
 
@@ -122,17 +138,17 @@ const toPiece = (line, order) => ({
 });
 
 const lines = (order) => order?.lineItems?.nodes || [];
-const processed = (order) => Date.parse(order?.processedAt ?? '');
 const newestFirst = (a, b) => (processed(b) || 0) - (processed(a) || 0);
 // A reviewed set (from reviewed.mjs) holds product IDs; null means "not known".
 const isReviewed = (reviewed, line) => !!reviewed && reviewed.has(line.productId);
 
-// The Orders page strip's fallback, when the reviewed set is not known: pieces from orders placed in the last 60 days and
-// since fulfilled, one per product (its newest order wins), newest first, at most six. Each one links to its order's page.
+// The Orders page strip's fallback, when the reviewed set is not known: pieces from counted orders (isReviewable) placed
+// in the last 60 days, one per product (its newest order wins), newest first, at most six. Each one links to its order's
+// page.
 export function pickPieces(orders, {now = Date.now(), days = REVIEW_WINDOW_DAYS, max = MAX_PIECES} = {}) {
-  const since = now - days * 24 * 60 * 60 * 1000;
+  const since = now - days * DAY_MS;
   const recent = (orders || [])
-    .filter(isReviewable)
+    .filter((order) => isReviewable(order, now))
     .filter((order) => processed(order) >= since && processed(order) <= now + 60 * 60 * 1000)
     .sort((a, b) => processed(b) - processed(a));
   const seen = new Set();
@@ -149,14 +165,17 @@ export function pickPieces(orders, {now = Date.now(), days = REVIEW_WINDOW_DAYS,
   return pieces;
 }
 
-// The Orders page strip when the reviewed set is known: every piece from fulfilled, uncancelled orders (any date) not yet
-// reviewed, one per product (its newest order wins), newest first. Shows at most `max`; `more` counts the rest.
-export function pickUnreviewed(orders, reviewed, {max = MAX_UNREVIEWED} = {}) {
-  const fulfilled = (orders || []).filter(isReviewable).filter((order) => orderLink(order.id)).sort(newestFirst);
+// The Orders page strip when the reviewed set is known: every piece from counted orders (isReviewable, any date) not
+// yet reviewed, one per product (its newest order wins), newest first. Shows at most `max`; `more` counts the rest.
+export function pickUnreviewed(orders, reviewed, {now = Date.now(), max = MAX_UNREVIEWED} = {}) {
+  const counted = (orders || [])
+    .filter((order) => isReviewable(order, now))
+    .filter((order) => orderLink(order.id))
+    .sort(newestFirst);
   const seen = new Set();
   const pieces = [];
   let more = 0;
-  for (const order of fulfilled) {
+  for (const order of counted) {
     for (const line of lines(order)) {
       if (!isPiece(line) || seen.has(line.productId) || isReviewed(reviewed, line)) continue;
       seen.add(line.productId);
@@ -174,11 +193,12 @@ export function stripPieces(orders, reviewed, options = {}) {
   return {pieces: pickPieces(orders, options), more: 0};
 }
 
-// The order page row: this order's pieces, one per product, only once the order is fulfilled. With a reviewed set,
-// only the pieces not yet reviewed; none left means the block shows nothing and Judge.me's own button stays.
-/** @param {any} order @param {{max?: number, reviewed?: Set<string>|null}} [options] */
-export function orderPieces(order, {max = MAX_ORDER_PHOTOS, reviewed = null} = {}) {
-  if (!isReviewable(order)) return [];
+// The order page row: this order's pieces, one per product, only once the order counts (isReviewable). With a
+// reviewed set, only the pieces not yet reviewed; none left means the block shows nothing and Judge.me's own button
+// stays.
+/** @param {any} order @param {{max?: number, reviewed?: Set<string>|null, now?: number}} [options] */
+export function orderPieces(order, {max = MAX_ORDER_PHOTOS, reviewed = null, now = Date.now()} = {}) {
+  if (!isReviewable(order, now)) return [];
   const seen = new Set();
   const pieces = [];
   for (const line of lines(order)) {
@@ -188,4 +208,19 @@ export function orderPieces(order, {max = MAX_ORDER_PHOTOS, reviewed = null} = {
     if (pieces.length >= max) break;
   }
   return pieces;
+}
+
+// The shop the Orders page welcome sends customers to. In customer accounts an s-button href may be any https URL; its
+// target defaults to 'auto', which acts as the same tab unless Shopify chooses to open a cross-origin URL in a new one.
+export const SHOP_URL = 'https://weezypop.com/';
+
+// What the Orders page block shows, from the state of its orders query:
+//   {status: 'loading'}                        nothing yet
+//   {status: 'failed'}                         nothing: an orders error never shows a welcome by mistake
+//   {status: 'ready', strip: {pieces, more}}   'strip' when there are pieces to review, otherwise 'welcome'
+//                                              (no orders, or every piece reviewed), so the page is never bare
+/** @param {any} state @returns {'strip'|'welcome'|null} */
+export function ordersBlockView(state) {
+  if (!state || state.status !== 'ready') return null;
+  return state.strip?.pieces?.length ? 'strip' : 'welcome';
 }
