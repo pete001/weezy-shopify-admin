@@ -36,6 +36,17 @@ The preview opens at **http://127.0.0.1:48295**. Its changes are in memory and r
 
 Staff open [Apps → Weezy Pop App Editor](https://admin.shopify.com/store/weezypopshop/apps/weezy-pop-app-editor) using their Shopify staff account. This is a Shopify-hosted `admin.app.home.render` extension. There is no separate admin password, Fly admin website or production server in this repository.
 
+## Customer account review blocks
+
+The same app also carries a small customer-facing extension, `extensions/account-reviews` (**Account reviews**), on Weezy Pop's customer accounts. It only reads the signed-in customer's own orders through the Customer Account API and never writes anything. It sends customers to their order page, where Judge.me's verified "Write a new review" form is; it never links to Judge.me or calls its API.
+
+| Target | Customers see |
+|---|---|
+| Orders page block (`customer-account.order-index.block.render`) | "Loving your new sparkle?": up to six pieces from orders placed in the last 60 days and since fulfilled, each with a REVIEW button to its order page |
+| Order page block (`customer-account.order-status.block.render`) | "Your sparkle, your say" and the order's piece photos once the order is fulfilled, placed above Judge.me's "Write a new review" |
+
+All customer words are in `extensions/account-reviews/src/copy.mjs`; which pieces show is decided in `pieces.mjs` (gift cards, cancelled orders and the £0 product options helper lines are left out). It needs the `customer_read_orders` scope and protected customer data access, which take effect only on an authorized deploy; placing the blocks is a separate step in Shopify admin. [Post-deploy steps](docs/DEPLOYMENT.md#customer-account-review-blocks).
+
 ## How this connects to the app
 
 ```mermaid
@@ -56,6 +67,7 @@ Changes to existing metadata values reach the app after the app service's cache 
 
 ```text
 extensions/app-images/src/  Shopify UI, workflows and fallback content
+extensions/account-reviews/ Customer account review blocks (read-only, own tsconfig)
 contracts/                 The charm_club metafield contract (validators, editors, readers) and its tests
 assets/                    Existing admin app icon and branding
 fixtures/                  Synthetic catalogue and synthetic proof image
@@ -70,6 +82,6 @@ The `contracts` modules are the canonical, versioned definition of the metafield
 
 Create a feature branch, make the smallest admin change, run `npm run verify` and review the affected workflow. CI checks pull requests and `main` on an isolated hosted runner. It never deploys or gets Shopify credentials.
 
-The same installed App Editor client ID and extension UID are retained, so an authorized deployment updates the existing app. Do not create a replacement app, increase scopes or deploy to any other app. [Deployment checklist](docs/DEPLOYMENT.md).
+The same installed App Editor client ID and extension UID are retained, so an authorized deployment updates the existing app. Do not create a replacement app, increase scopes or deploy to any other app. The one deliberate addition is `customer_read_orders`, for the customer account review blocks. [Deployment checklist](docs/DEPLOYMENT.md).
 
 [Current code review](docs/CODE-REVIEW-2026-10-26.md): all88 tests, strict typecheck and production build pass. Three Dependabot updates are merged; the [current audit](docs/DEPENDENCY-AUDIT.md) has0 findings. Preact11 remains held for its draft-navigation regression.
