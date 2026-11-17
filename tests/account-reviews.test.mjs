@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {copy} from '../extensions/account-reviews/src/copy.mjs';
-import {pickPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES} from '../extensions/account-reviews/src/pieces.mjs';
+import {pickPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES,GRID_COLUMNS} from '../extensions/account-reviews/src/pieces.mjs';
 
 // Synthetic orders only: made-up IDs, no customers.
 const now=Date.parse('2026-11-17T12:00:00Z');
@@ -117,4 +117,13 @@ test('the blocks take every customer-facing word from copy.mjs', () => {
     // No literal text between JSX tags: only {expressions}.
     assert.doesNotMatch(source,/>[ \t]*[A-Za-z✦][^<{]*</,file);
   }
+});
+
+test('the Orders strip columns are one container query with comma-free values, as Polaris responsive values need', () => {
+  // `@container (condition) value, fallback`: Polaris splits on commas, so a comma inside repeat() or minmax() breaks it.
+  assert.match(GRID_COLUMNS,/^@container \([^)]*\) [^,()]+, [^,()]+$/);
+  assert.doesNotMatch(GRID_COLUMNS,/\([^)]*,[^)]*\)/);
+  assert.equal(GRID_COLUMNS.split(',')[1].trim().split(/\s+/).length,2,'two columns on phones');
+  const source=readFileSync(new URL('../extensions/account-reviews/src/OrdersStrip.tsx',import.meta.url),'utf8');
+  assert.match(source,/gridTemplateColumns=\{GRID_COLUMNS\}/);
 });
