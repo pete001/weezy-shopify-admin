@@ -1,6 +1,6 @@
 // Order page block (customer-account.order-status.block.render), placed above Judge.me's "Write a new review":
-// a short prompt and this order's piece photos, once the order counts: fulfilled as a whole, or placed 14 days ago or
-// more (pieces.mjs). No buttons of its own. When the app service says which products the customer already reviewed,
+// a short prompt and this order's piece photos, once the order counts: fulfilled as a whole, as Judge.me's form needs
+// (pieces.mjs). No buttons of its own. When the app service says which products the customer already reviewed,
 // only the pieces not yet reviewed show, and nothing at all once every piece is reviewed. Shows nothing while loading,
 // when the order does not count yet or is cancelled, or on any orders error. Unlike the Orders page, no welcome here.
 import '@shopify/ui-extensions/preact';

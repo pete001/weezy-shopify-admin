@@ -1,7 +1,7 @@
 // Orders page block (customer-account.order-index.block.render): the customer's pieces not yet reviewed, each with a
-// REVIEW button to its order's page, where Judge.me's verified "Write a new review" form is. An order counts once
-// fulfilled, or 14 days after it was placed (pieces.mjs). Which products are already reviewed comes from the app
-// service; without it, the block falls back to pieces from recent counted orders.
+// REVIEW button to its order's page, where Judge.me's verified "Write a new review" form is. An order counts only
+// once fulfilled as a whole, as Judge.me's form needs (pieces.mjs). Which products are already reviewed comes from
+// the app service; without it, the block falls back to pieces from recent counted orders.
 // When the orders answer but there is nothing to review (no orders yet included), it shows a welcome with a button to
 // the shop instead, so the page is never bare. Shows nothing while loading or on any orders error.
 import '@shopify/ui-extensions/preact';
