@@ -20,4 +20,12 @@ export const copy = {
     // The row of this order's photos, read out by screen readers.
     photosLabel: 'Pieces in this order',
   },
+  // The Orders page when there is nothing to review (no orders yet, or every piece reviewed), with one button to the
+  // shop (SHOP_URL in pieces.mjs). Approved brand lines.
+  welcome: {
+    eyebrow: '✦ YOUR WEEZY POP',
+    heading: 'Snap, Stack, Style.',
+    body: 'Start with one charm, or stack loads and go full maximalist.',
+    button: 'SHOP NOW',
+  },
 };
