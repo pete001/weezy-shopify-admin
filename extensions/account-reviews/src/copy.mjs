@@ -11,6 +11,8 @@ export const copy = {
     buttonLabel: (title) => `Review ${title}`,
     // The photo's alt text when Shopify has none for it.
     photoAlt: (title) => title,
+    // Under the grid when more pieces are waiting than it shows (12): "And 3 more pieces waiting for your review".
+    more: (count) => `And ${count} more ${Number(count) === 1 ? 'piece' : 'pieces'} waiting for your review`,
   },
   order: {
     heading: 'Your sparkle, your say',

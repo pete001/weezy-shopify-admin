@@ -44,7 +44,11 @@ The `weezy-account-reviews` extension ships with the app on `npm run deploy`. De
 4. **Judge.me on the order cards.** In the same editor's Apps settings, show Judge.me's "Write a new review" as a secondary action next to "Buy again", and keep at most two actions per order card so it shows as a button, not in the ··· menu.
 5. Check both pages on a phone (390 px wide) with a test customer's fulfilled order.
 
-The blocks cannot know which pieces a customer has already reviewed: that needs Judge.me's private API key and a server, which this repository does not have. That is why the Orders page only offers pieces from orders placed in the last 60 days and since fulfilled. An order counts once Shopify calls it Fulfilled as a whole; partly fulfilled and cancelled orders are left out.
+Which pieces a customer has already reviewed needs Judge.me's private API key and a server, which this repository does not have. The blocks ask the app service instead: `GET /v1/account/reviewed` with the customer's Shopify session token (`Authorization: Bearer`), answered with `{"productIds": [...]}`. The extension declares `network_access` in its `shopify.extension.toml` for this; the app's network access is granted in the Dev Dashboard. With that answer, the Orders page offers every piece from fully fulfilled orders (the last 50, any date) that is not yet reviewed, 12 at most with a line counting the rest, and the order page shows only the pieces not yet reviewed, or nothing once all are.
+
+When the service cannot answer (a 401 or 503, a network error, an odd body, or no answer within 5 seconds), the blocks fall back: the Orders page offers pieces from orders placed in the last 60 days and since fulfilled, six at most, and the order page shows all of the order's pieces. An order counts once Shopify calls it Fulfilled as a whole; partly fulfilled and cancelled orders are left out.
+
+**Release order.** Deploy the app service's `/v1/account/reviewed` endpoint from weezy-app first, with its two secrets set (see weezy-app), and check it answers. Only then deploy this App Editor change. Deployed before the service, the blocks still work, but on the 60-day fallback.
 
 Each REVIEW button links to `shopify:customer-account/orders/<numeric order ID>`. Shopify's docs show `shopify:customer-account/orders` for the Orders page but no example for a single order, so check that a button opens the right order page after the first deploy.
 

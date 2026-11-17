@@ -1,6 +1,8 @@
 // Order page block (customer-account.order-status.block.render), placed above Judge.me's "Write a new review":
 // a short prompt and this order's piece photos, only once the whole order is fulfilled. No buttons of its own.
-// Shows nothing while loading, when the order is not fulfilled, or on any error.
+// When the app service says which products the customer already reviewed, only the pieces not yet reviewed show, and
+// nothing at all once every piece is reviewed. Shows nothing while loading, when the order is not fulfilled, or on any
+// orders error.
 import '@shopify/ui-extensions/preact';
 import type {Api} from '@shopify/ui-extensions/customer-account.order-status.block.render';
 declare const shopify: Api;
@@ -8,10 +10,13 @@ import {render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {copy} from './copy.mjs';
 import {customerAccountQuery, orderPieces, ORDER_QUERY} from './pieces.mjs';
+import {loadReviewed} from './reviewed.mjs';
 
 type Piece = {productId:string;title:string;imageUrl:string|null;imageAlt:string};
 
 export default async function extension(){render(<OrderHeader/>,document.body);}
+// A fresh session token for this customer, for the app service (Shopify caches it until it expires).
+function sessionToken(){return shopify.sessionToken.get();}
 
 export function OrderHeader(){
   const [pieces,setPieces]=useState<Piece[]>([]);
@@ -20,8 +25,11 @@ export function OrderHeader(){
     let live=true;
     setPieces([]);
     if(!orderId)return;
-    customerAccountQuery(fetch,ORDER_QUERY,{id:orderId})
-      .then((data:any)=>{if(live)setPieces((orderPieces(data?.order) as Piece[]).filter(piece=>piece.imageUrl));})
+    Promise.all([
+      customerAccountQuery(fetch,ORDER_QUERY,{id:orderId}),
+      loadReviewed({fetchImpl:fetch,getToken:sessionToken}),
+    ])
+      .then(([data,reviewed]:[any,Set<string>|null])=>{if(live)setPieces((orderPieces(data?.order,{reviewed}) as Piece[]).filter(piece=>piece.imageUrl));})
       .catch(()=>{if(live)setPieces([]);});
     return ()=>{live=false;};
   },[orderId]);

@@ -2,7 +2,7 @@
 
 Read README.md, docs/SHOPIFY-CONTRACT.md and docs/DEPLOYMENT.md before editing. This repository owns the Shopify-hosted App Editor and the `charm_club` metafield contract it writes. The iPhone app, its app service (the Fly reader the app and this editor read from), checkout/payment logic, notifications and web sharing belong to pete001/weezy-app, which consumes this contract. The editor names the app service in one place only: `extensions/app-images/src/app-service.mjs`.
 
-`extensions/account-reviews` is a separate, customer-facing customer account extension in the same app: read-only, the customer's own orders through the Customer Account API, no Judge.me calls. It is typechecked as its own project (its `s-*` element types clash with the admin ones).
+`extensions/account-reviews` is a separate, customer-facing customer account extension in the same app: read-only, the customer's own orders through the Customer Account API, and which products they already reviewed from the app service (`/v1/account/reviewed`, session token, URL from app-service.mjs); no Judge.me calls. It is typechecked as its own project (its `s-*` element types clash with the admin ones).
 
 Shopify is the source of truth. Staff authenticate through Shopify's online direct Admin API. Preserve the installed App Editor client ID, extension UID, API version and approved scopes. Never add a server token, staff password, production authentication bypass or an independent source of product truth.
 
