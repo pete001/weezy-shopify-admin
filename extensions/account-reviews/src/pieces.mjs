@@ -9,6 +9,11 @@ export const MAX_PIECES = 6; // Orders page strip
 export const MAX_ORDER_PHOTOS = 12; // order page photo row
 export const RECENT_ORDERS = 20;
 
+// The Orders page strip's columns: two on phones, three once the block is wider than 480px.
+// Polaris responsive values are `@container (condition) value, fallback`, split on commas, so neither value may
+// contain a comma: `repeat(3, 1fr)` or `minmax(0, 1fr)` would be cut apart and the whole value dropped.
+export const GRID_COLUMNS = '@container (inline-size > 480px) 1fr 1fr 1fr, 1fr 1fr';
+
 // The Customer Account API, called with fetch(). Shopify authenticates these requests for the signed-in customer.
 export const CUSTOMER_ACCOUNT_API = 'shopify://customer-account/api/2026-10/graphql.json';
 

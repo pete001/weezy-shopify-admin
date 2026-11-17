@@ -7,7 +7,7 @@ import type {} from '@shopify/ui-extensions/customer-account.order-index.block.r
 import {render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {copy} from './copy.mjs';
-import {customerAccountQuery, pickPieces, RECENT_ORDERS, RECENT_ORDERS_QUERY} from './pieces.mjs';
+import {customerAccountQuery, GRID_COLUMNS, pickPieces, RECENT_ORDERS, RECENT_ORDERS_QUERY} from './pieces.mjs';
 
 type Piece = {productId:string;title:string;imageUrl:string|null;imageAlt:string;orderId:string;href:string};
 
@@ -31,7 +31,7 @@ export function OrdersStrip(){
         <s-paragraph>{copy.orders.body}</s-paragraph>
       </s-stack>
       <s-query-container>
-        <s-grid gridTemplateColumns="@container (inline-size > 720px) repeat(6, minmax(0, 1fr)), @container (inline-size > 480px) repeat(3, minmax(0, 1fr)), repeat(2, minmax(0, 1fr))" gap="base">
+        <s-grid gridTemplateColumns={GRID_COLUMNS} gap="base">
           {pieces.map(piece=><s-stack key={piece.productId} gap="small-200">
             {piece.imageUrl?<s-image src={piece.imageUrl} alt={piece.imageAlt} aspectRatio="1/1" objectFit="cover" borderRadius="base" loading="lazy"/>:null}
             <s-text>{piece.title}</s-text>
