@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {copy} from '../extensions/account-reviews/src/copy.mjs';
-import {pickPieces,pickUnreviewed,stripPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,ordersBlockView,SHOP_URL,REVIEW_AFTER_DAYS,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES,MAX_UNREVIEWED,GRID_COLUMNS} from '../extensions/account-reviews/src/pieces.mjs';
+import {pickPieces,pickUnreviewed,stripPieces,orderPieces,orderLink,numericId,isPiece,isReviewable,pieceTitle,ordersBlockView,SHOP_URL,customerAccountQuery,CUSTOMER_ACCOUNT_API,RECENT_ORDERS,RECENT_ORDERS_QUERY,ORDER_QUERY,MAX_PIECES,MAX_UNREVIEWED,GRID_COLUMNS} from '../extensions/account-reviews/src/pieces.mjs';
 import {loadReviewed,reviewedSet,REVIEWED_URL,REVIEWED_TIMEOUT_MS} from '../extensions/account-reviews/src/reviewed.mjs';
 import {APP_SERVICE_URL} from '../extensions/app-images/src/app-service.mjs';
 
@@ -14,18 +14,18 @@ const order=(id,days,items,extra={})=>({id:`gid://shopify/Order/${id}`,processed
 const gid=p=>`gid://shopify/Product/${p}`;
 const ids=pieces=>pieces.map(p=>p.productId.split('/').pop());
 
-test('an order counts once fulfilled, or 14 days after it was placed; cancelled never', () => {
-  assert.equal(REVIEW_AFTER_DAYS,14);
+test('an order counts only once fulfilled, however old (Judge.me\'s form needs a fulfilled order); cancelled never', () => {
   assert.equal(isReviewable(order(1,0,[]),now),true,'fulfilled today');
-  assert.equal(isReviewable(order(1,14,[],{fulfillmentStatus:'UNFULFILLED'}),now),true,'unfulfilled, 14 days');
-  assert.equal(isReviewable(order(1,13,[],{fulfillmentStatus:'UNFULFILLED'}),now),false,'unfulfilled, 13 days');
-  assert.equal(isReviewable(order(1,13.99,[],{fulfillmentStatus:'UNFULFILLED'}),now),false,'unfulfilled, just under 14 days');
-  assert.equal(isReviewable(order(1,20,[],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),now),true,'partly fulfilled, 20 days');
-  assert.equal(isReviewable(order(1,3,[],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),now),false,'partly fulfilled, 3 days');
-  assert.equal(isReviewable(order(1,30,[],{fulfillmentStatus:'UNFULFILLED',processedAt:null}),now),false,'no placed date');
+  assert.equal(isReviewable(order(1,400,[]),now),true,'fulfilled long ago');
+  assert.equal(isReviewable(order(1,0,[],{processedAt:null}),now),true,'fulfilled, no placed date');
+  for(const days of [1,13,14,20,90,400]){
+    assert.equal(isReviewable(order(1,days,[],{fulfillmentStatus:'UNFULFILLED'}),now),false,`unfulfilled, ${days} days`);
+    assert.equal(isReviewable(order(1,days,[],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),now),false,`partly fulfilled, ${days} days`);
+  }
   for(const status of ['FULFILLED','UNFULFILLED'])for(const days of [1,13,14,90])assert.equal(isReviewable(order(1,days,[],{fulfillmentStatus:status,cancelledAt:daysAgo(0)}),now),false,`cancelled ${status} ${days}`);
   assert.equal(isReviewable(null),false);
-  assert.equal(isReviewable(order(1,14,[],{fulfillmentStatus:'UNFULFILLED'})),true,'now defaults to the clock');
+  assert.equal(isReviewable(order(1,90,[])),true,'works without now');
+  assert.equal(isReviewable(order(1,90,[],{fulfillmentStatus:'UNFULFILLED'})),false,'works without now');
 });
 
 test('fallback: counted, uncancelled orders from the last 60 days', () => {
@@ -40,7 +40,7 @@ test('fallback: counted, uncancelled orders from the last 60 days', () => {
     order(8,30,[line(8)],{fulfillmentStatus:'UNFULFILLED'}),
     order(9,13,[line(9)],{fulfillmentStatus:'UNFULFILLED'}),
   ];
-  assert.deepEqual(ids(pickPieces(orders,{now})),['1','8','7']);
+  assert.deepEqual(ids(pickPieces(orders,{now})),['1','7'],'unfulfilled orders never count, however old');
 });
 
 test('gift cards, helper lines and custom lines are not pieces; free pieces are', () => {
@@ -90,12 +90,12 @@ test('the order link uses the numeric order ID and refuses anything else', () =>
   assert.deepEqual(pickPieces([order('x',1,[line(1)],{id:'not-a-gid'})],{now}),[]);
 });
 
-test('the order page shows its pieces once the order counts: fulfilled, or placed 14 days ago', () => {
+test('the order page shows its pieces only once the order is fulfilled', () => {
   const items=[line(1),line(2,{giftCard:true}),line(1),line(3,{productType:'mws_apo_generated'}),line(4),line(5,{totalPrice:{amount:'0.0'}})];
   assert.deepEqual(ids(orderPieces(order(7,90,items),{now})),['1','4','5']);
   assert.deepEqual(orderPieces(order(7,1,items,{fulfillmentStatus:'PARTIALLY_FULFILLED'}),{now}),[]);
   assert.deepEqual(orderPieces(order(7,13,items,{fulfillmentStatus:'UNFULFILLED'}),{now}),[]);
-  assert.deepEqual(ids(orderPieces(order(7,14,items,{fulfillmentStatus:'UNFULFILLED'}),{now})),['1','4','5']);
+  assert.deepEqual(orderPieces(order(7,90,items,{fulfillmentStatus:'UNFULFILLED'}),{now}),[],'an old unfulfilled order: Judge.me\'s form would do nothing');
   assert.deepEqual(orderPieces(order(7,1,items,{cancelledAt:daysAgo(0)}),{now}),[]);
   assert.deepEqual(orderPieces(order(7,90,items,{fulfillmentStatus:'UNFULFILLED',cancelledAt:daysAgo(80)}),{now}),[]);
   assert.deepEqual(orderPieces(null),[]);
@@ -107,9 +107,10 @@ test('queries ask only for what the blocks use: no names, emails or addresses', 
     assert.doesNotMatch(query,/email|address|firstName|lastName|phone|customer\s*\{[^}]*displayName/i);
     assert.match(query,/fulfillmentStatus/);
     assert.match(query,/cancelledAt/);
-    assert.match(query,/processedAt/,'the 14-day rule needs the placed date');
     assert.doesNotMatch(query,/totalPrice/,'prices no longer decide anything');
   }
+  assert.match(RECENT_ORDERS_QUERY,/processedAt/,'the 60-day fallback and newest-first need the placed date');
+  assert.doesNotMatch(ORDER_QUERY,/processedAt/,'the order page needs no date');
   assert.match(RECENT_ORDERS_QUERY,/orders\(first: \$first, sortKey: PROCESSED_AT, reverse: true\)/);
 });
 
@@ -164,12 +165,13 @@ test('with the reviewed set: every counted piece not yet reviewed, any date, new
     order(3,3,[line(4)],{fulfillmentStatus:'PARTIALLY_FULFILLED'}),
     order(4,2,[line(5)],{cancelledAt:daysAgo(1)}),
     order(5,90,[line(6),line(7,{giftCard:true}),line(8,{productType:'mws_apo_generated'})]),
-    order(6,200,[line(9,{totalPrice:{amount:'0.0'}})],{fulfillmentStatus:'UNFULFILLED'}),
+    order(6,200,[line(9,{totalPrice:{amount:'0.0'}})]),
+    order(9,200,[line(12)],{fulfillmentStatus:'UNFULFILLED'}),
     order(7,13,[line(10)],{fulfillmentStatus:'UNFULFILLED'}),
     order(8,300,[line(11)],{fulfillmentStatus:'UNFULFILLED',cancelledAt:daysAgo(299)}),
   ];
   const {pieces,more}=pickUnreviewed(orders,new Set([gid(3)]),{now});
-  assert.deepEqual(ids(pieces),['1','6','9','2'],'an unfulfilled £0 order from 200 days ago counts; 13 days and cancelled do not');
+  assert.deepEqual(ids(pieces),['1','6','9','2'],'a fulfilled £0 order counts; unfulfilled (13 or 200 days) and cancelled do not');
   assert.equal(pieces[0].href,'shopify:customer-account/orders/2','the newest order wins');
   assert.equal(more,0);
   assert.deepEqual(pickUnreviewed(orders,new Set([gid(1),gid(2),gid(3),gid(6),gid(9)]),{now}),{pieces:[],more:0},'nothing left to review');
@@ -261,12 +263,18 @@ test('the reviewed fetch gives up after its timeout and aborts the request', asy
   assert.equal(await loadReviewed({fetchImpl:hang,getToken:()=>new Promise(()=>{}),timeoutMs:30}),null,'a token that never comes');
 });
 
-test('a customer\'s only order, unfulfilled and £0, shows on the Orders page after 14 days', () => {
-  const only=[order(1,20,[line('gift',{totalPrice:{amount:'0.0'}}),line('fee',{name:'__Customized-Items',productType:'mws_apo_generated',totalPrice:{amount:'0.0'}})],{fulfillmentStatus:'UNFULFILLED'})];
-  assert.deepEqual(ids(stripPieces(only,new Set(),{now}).pieces),['gift']);
-  assert.deepEqual(ids(stripPieces(only,null,{now}).pieces),['gift'],'the fallback too');
-  assert.deepEqual(ids(orderPieces(only[0],{now})),['gift'],'and on its order page');
-  assert.equal(ordersBlockView({status:'ready',strip:stripPieces(only,new Set(),{now})}),'strip');
+test('a customer\'s only order, £0 and handed over in person, shows once marked fulfilled, never before', () => {
+  const items=[line('gift',{totalPrice:{amount:'0.0'}}),line('fee',{name:'__Customized-Items',productType:'mws_apo_generated',totalPrice:{amount:'0.0'}})];
+  const unfulfilled=[order(1,20,items,{fulfillmentStatus:'UNFULFILLED'})];
+  assert.deepEqual(stripPieces(unfulfilled,new Set(),{now}).pieces,[]);
+  assert.deepEqual(stripPieces(unfulfilled,null,{now}).pieces,[],'the fallback too');
+  assert.deepEqual(orderPieces(unfulfilled[0],{now}),[],'and its order page');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces(unfulfilled,new Set(),{now})}),'welcome','the welcome, not a dead-end REVIEW button');
+  const fulfilled=[order(1,20,items)];
+  assert.deepEqual(ids(stripPieces(fulfilled,new Set(),{now}).pieces),['gift']);
+  assert.deepEqual(ids(stripPieces(fulfilled,null,{now}).pieces),['gift'],'the fallback too');
+  assert.deepEqual(ids(orderPieces(fulfilled[0],{now})),['gift'],'and on its order page');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces(fulfilled,new Set(),{now})}),'strip');
 });
 
 test('the Orders block: pieces give the strip, none give the welcome, an orders error or loading gives nothing', () => {
@@ -276,7 +284,7 @@ test('the Orders block: pieces give the strip, none give the welcome, an orders 
   assert.equal(ordersBlockView({status:'ready',strip:stripPieces([],new Set(),{now})}),'welcome','no orders at all');
   assert.equal(ordersBlockView({status:'ready',strip:stripPieces(undefined,null,{now})}),'welcome','no orders list');
   assert.equal(ordersBlockView({status:'ready',strip:stripPieces([order(1,1,[line(1)])],new Set([gid(1)]),{now})}),'welcome','everything reviewed');
-  assert.equal(ordersBlockView({status:'ready',strip:stripPieces([order(1,3,[line(1)],{fulfillmentStatus:'UNFULFILLED'})],new Set(),{now})}),'welcome','an order too new to count');
+  assert.equal(ordersBlockView({status:'ready',strip:stripPieces([order(1,3,[line(1)],{fulfillmentStatus:'UNFULFILLED'})],new Set(),{now})}),'welcome','an order not yet fulfilled');
   assert.equal(ordersBlockView({status:'failed'}),null);
   assert.equal(ordersBlockView({status:'loading'}),null);
   assert.equal(ordersBlockView(null),null);

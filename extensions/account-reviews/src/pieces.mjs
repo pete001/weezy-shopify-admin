@@ -1,8 +1,7 @@
 // Which pieces the account review blocks show, worked out from the customer's own orders. Pure functions only:
 // the blocks fetch, these decide. Tested in tests/account-reviews.test.mjs with synthetic orders.
 //
-// An order counts once Shopify calls it Fulfilled, or once it was placed REVIEW_AFTER_DAYS days ago or more: Weezy Pop
-// hands some orders over in person or at markets and never marks them fulfilled. Cancelled orders never count.
+// An order counts only once Shopify calls it Fulfilled as a whole, and never when cancelled (isReviewable says why).
 //
 // Which products the customer already reviewed comes from the app service (reviewed.mjs), which asks Judge.me with
 // its private key. With that set, the Orders page offers every piece from counted orders not yet reviewed. When the
@@ -12,7 +11,6 @@
 // When the orders answer but nothing is left to review (no orders at all included), the Orders page shows a welcome
 // with a button to the shop instead (ordersBlockView). The order page shows nothing then.
 
-export const REVIEW_AFTER_DAYS = 14; // an order not marked fulfilled counts this many days after it was placed
 export const REVIEW_WINDOW_DAYS = 60; // fallback only
 export const MAX_PIECES = 6; // Orders page strip, fallback only
 export const MAX_UNREVIEWED = 12; // Orders page strip, with the reviewed set
@@ -59,7 +57,6 @@ export const RECENT_ORDERS_QUERY = `query RecentOrdersForReview($first: Int!) {
 export const ORDER_QUERY = `query OrderForReview($id: ID!) {
   order(id: $id) {
     id
-    processedAt
     cancelledAt
     fulfillmentStatus
     lineItems(first: 50) {
@@ -87,15 +84,14 @@ export async function customerAccountQuery(fetchImpl, query, variables) {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const processed = (order) => Date.parse(order?.processedAt ?? '');
 
-// Never a cancelled order. Otherwise a whole order Shopify calls Fulfilled, or any order placed REVIEW_AFTER_DAYS days
-// ago or more, fulfilled or not (handed over in person, at a market, or still partly shipped). An order with no
-// placed date counts only once fulfilled.
-/** @param {any} order @param {number} [now] */
-export function isReviewable(order, now = Date.now()) {
-  if (!order || order.cancelledAt) return false;
-  if (order.fulfillmentStatus === 'FULFILLED') return true;
-  const placed = processed(order);
-  return Number.isFinite(placed) && placed <= now - REVIEW_AFTER_DAYS * DAY_MS;
+// Only a whole order Shopify calls Fulfilled, and never a cancelled one. Judge.me's "Write a new review" in customer
+// accounts works only for fulfilled orders (https://judge.me/help/en/articles/10174105-collect-reviews-directly-from-shopify-customer-accounts:
+// it "will show in Customer accounts for fulfilled orders"); on an unfulfilled order its button does nothing, so a
+// REVIEW button there would lead to a dead end. Orders handed over in person or at a market must be marked fulfilled
+// in Shopify for reviews to work. The second argument is ignored; it stays so callers passing `now` still work.
+/** @param {any} order @param {number} [_now] */
+export function isReviewable(order, _now) {
+  return !!order && !order.cancelledAt && order.fulfillmentStatus === 'FULFILLED';
 }
 
 // Lines that are not pieces a customer could review: gift cards, custom lines with no product, and the helper lines
