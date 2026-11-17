@@ -38,14 +38,14 @@ Staff open [Apps → Weezy Pop App Editor](https://admin.shopify.com/store/weezy
 
 ## Customer account review blocks
 
-The same app also carries a small customer-facing extension, `extensions/account-reviews` (**Account reviews**), on Weezy Pop's customer accounts. It only reads the signed-in customer's own orders through the Customer Account API and never writes anything. It sends customers to their order page, where Judge.me's verified "Write a new review" form is; it never links to Judge.me or calls its API.
+The same app also carries a small customer-facing extension, `extensions/account-reviews` (**Account reviews**), on Weezy Pop's customer accounts. It reads the signed-in customer's own orders through the Customer Account API and never writes anything. It sends customers to their order page, where Judge.me's verified "Write a new review" form is; it never links to Judge.me or calls its API. To know which pieces are already reviewed, it asks the app service (`GET /v1/account/reviewed`, with the customer's Shopify session token), which asks Judge.me; the service URL comes from `extensions/app-images/src/app-service.mjs`.
 
 | Target | Customers see |
 |---|---|
-| Orders page block (`customer-account.order-index.block.render`) | "Loving your new sparkle?": up to six pieces from orders placed in the last 60 days and since fulfilled, each with a REVIEW button to its order page |
-| Order page block (`customer-account.order-status.block.render`) | "Your sparkle, your say" and the order's piece photos once the order is fulfilled, placed above Judge.me's "Write a new review" |
+| Orders page block (`customer-account.order-index.block.render`) | "Loving your new sparkle?": every delivered piece not yet reviewed (from the last 50 orders, any date), up to 12 with a line counting the rest, each with a REVIEW button to its order page. If the app service cannot say what is reviewed (down, over 5 seconds, or an odd answer), it falls back to up to six pieces from orders placed in the last 60 days and since fulfilled |
+| Order page block (`customer-account.order-status.block.render`) | "Your sparkle, your say" and the photos of the order's pieces not yet reviewed, once the order is fulfilled, placed above Judge.me's "Write a new review"; nothing once every piece is reviewed |
 
-All customer words are in `extensions/account-reviews/src/copy.mjs`; which pieces show is decided in `pieces.mjs` (gift cards, cancelled orders and the £0 product options helper lines are left out). It needs the `customer_read_orders` scope and protected customer data access, which take effect only on an authorized deploy; placing the blocks is a separate step in Shopify admin. [Post-deploy steps](docs/DEPLOYMENT.md#customer-account-review-blocks).
+All customer words are in `extensions/account-reviews/src/copy.mjs`; which pieces show is decided in `pieces.mjs` (gift cards, cancelled orders and the £0 product options helper lines are left out) and the reviewed set is read in `reviewed.mjs`. It needs the `customer_read_orders` scope, the `network_access` capability (granted for the app in the Dev Dashboard) and protected customer data access, which take effect only on an authorized deploy; placing the blocks is a separate step in Shopify admin. [Post-deploy steps](docs/DEPLOYMENT.md#customer-account-review-blocks).
 
 ## How this connects to the app
 

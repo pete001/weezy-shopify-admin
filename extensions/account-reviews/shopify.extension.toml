@@ -1,11 +1,14 @@
 # Review prompts in Weezy Pop's customer accounts (account.weezypop.com). They send customers to the order page,
-# where Judge.me's own "Write a new review" form is. Reads orders through the Customer Account API only.
+# where Judge.me's own "Write a new review" form is. Reads orders through the Customer Account API, and asks the app
+# service which products the customer already reviewed (network_access; granted for the app in the Dev Dashboard).
 api_version = "2026-10"
 [[extensions]]
 name = "Account reviews"
 handle = "weezy-account-reviews"
 uid = "56d88538-1336-4530-f00f-2041bb6da9b55097bd3c"
 type = "ui_extension"
+[extensions.capabilities]
+network_access = true
 [[extensions.targeting]]
 target = "customer-account.order-index.block.render"
 module = "./src/OrdersStrip.tsx"
