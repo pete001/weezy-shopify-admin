@@ -330,6 +330,7 @@ test('the silver cut-out is its own draft beside the gold one, saves as appCutou
  await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
  await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
  await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Silver cut-out')&&text().includes('No silver cut-out yet'));
+ assert.ok(!nodes().some(n=>n.localName==='s-heading'&&n.textContent.endsWith(' acrylic')),'no colour option: the boxes are unchanged, with no colour headings');
  const field=label=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')===label);
  const silver=()=>field('Silver cut-out link from Shopify Files'),gold=()=>field('Gold cut-out link from Shopify Files');
  const media=JSON.stringify(products[1].media),before=writes,goldPNG='https://cdn.shopify.com/s/files/1/0904/files/beta-gold.png?v=1';
@@ -352,6 +353,45 @@ test('the silver cut-out is its own draft beside the gold one, saves as appCutou
  click('s-button','Remove gold cut-out');await until(()=>text().includes('Saving removes your gold cut-out'));click('s-button','Save · remove my gold cut-out');
  await until(()=>text().includes('No cut-out yet')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
  assert.ok(writes>before);assert.equal(JSON.stringify(products[1].media),media);
+});
+
+test('a charm in several acrylic colours gets a gold and a silver cut-out box per later colour, saved in appCutoutColours',async()=>{
+ const saved=products[1].appImages;products[1].options=[{name:'Acrylic Colour',optionValues:[{name:'Gold'},{name:'Silver'},{name:'Glitter'}]}];
+ await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
+ await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
+ const headings=()=>nodes().filter(n=>n.localName==='s-heading').map(n=>n.textContent);
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&headings().includes('Silver acrylic'));
+ assert.deepEqual(headings().filter(h=>h.endsWith(' acrylic')),['Gold acrylic','Silver acrylic','Glitter acrylic'],'the first colour labels the existing boxes; each later colour has its own section');
+ const field=label=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')===label);
+ const box=(colour,finish)=>field(`${colour} acrylic on ${finish} hardware: link from Shopify Files`);
+ assert.ok(box('Silver','gold')&&box('Silver','silver')&&box('Glitter','gold')&&box('Glitter','silver')&&!box('Gold','gold'));
+ const type=(f,value)=>{f.value=value;f.dispatchEvent(new Event('input'));};
+ const stored=()=>JSON.parse(products[1].appImages?.value??'{}').appCutoutColours;
+ const media=JSON.stringify(products[1].media),before=writes;
+ type(box('Silver','gold'),'https://cdn.shopify.com/s/files/1/beta-silver-gold.jpg');
+ await until(()=>!!box('Silver','gold').getAttribute('error'));assert.ok(by('s-button','Save Silver acrylic on gold hardware').getAttribute('disabled')!=null);assert.equal(writes,before);
+ const sg='https://cdn.shopify.com/s/files/1/0904/files/beta-silver-gold.png?v=1',ss='https://cdn.shopify.com/s/files/1/0904/files/beta-silver-silver.webp?v=1';
+ type(box('Silver','gold'),sg);
+ await until(()=>text().includes('Unsaved cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===sg));
+ assert.equal(writes,before);assert.equal(await go('/order'),false,'an unsaved colour cut-out blocks leaving the page');
+ click('s-button','Save Silver acrylic on gold hardware');await until(()=>stored()?.Silver?.gold===sg&&!text().includes('Unsaved cut-out'));
+ assert.ok(nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===sg&&n.getAttribute('alt')==='Beta: saved cut-out, Silver acrylic on gold hardware'),'read back from Shopify');
+ type(box('Silver','silver'),ss);await until(()=>text().includes('Unsaved cut-out'));click('s-button','Save Silver acrylic on silver hardware');
+ await until(()=>stored()?.Silver?.silver===ss);assert.deepEqual(stored(),{Silver:{gold:sg,silver:ss}});
+ // Cancel puts the box back to what's saved, with nothing written.
+ const afterSaves=writes;type(box('Glitter','gold'),'https://cdn.shopify.com/s/files/1/0904/files/beta-glitter.png');await until(()=>text().includes('Unsaved cut-out'));
+ click('s-button','Cancel Glitter acrylic on gold hardware changes');await until(()=>!text().includes('Unsaved cut-out')&&box('Glitter','gold').value==='');assert.equal(writes,afterSaves);
+ // Saving the first colour's gold cut-out keeps the other colours.
+ const goldPNG='https://cdn.shopify.com/s/files/1/0904/files/beta-gold-acrylic.png?v=1';
+ type(field('Gold cut-out link from Shopify Files'),goldPNG);await until(()=>text().includes('Unsaved gold cut-out'));click('s-button','Save gold cut-out');
+ await until(()=>JSON.parse(products[1].appImages.value).appCutout===goldPNG);assert.deepEqual(stored(),{Silver:{gold:sg,silver:ss}});
+ // Removing one picture keeps the colour; removing its last one removes the colour from the stored JSON.
+ click('s-button','Remove Silver acrylic on gold hardware');await until(()=>text().includes('Saving removes the cut-out for Silver acrylic on gold hardware'));
+ click('s-button','Save · remove Silver acrylic on gold hardware');await until(()=>JSON.stringify(stored())===JSON.stringify({Silver:{silver:ss}}));
+ click('s-button','Remove Silver acrylic on silver hardware');await until(()=>text().includes('Saving removes the cut-out for Silver acrylic on silver hardware'));
+ click('s-button','Save · remove Silver acrylic on silver hardware');await until(()=>stored()===undefined&&!text().includes('Saving removes'));
+ assert.equal(JSON.parse(products[1].appImages.value).appCutout,goldPNG);assert.equal(JSON.stringify(products[1].media),media);
+ delete products[1].options;products[1].appImages=saved;
 });
 
 test('a cut-out built into the app shows as the charm’s cut-out, with nothing to do',async()=>{
