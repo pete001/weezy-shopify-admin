@@ -19,7 +19,7 @@ Install Node24.19.0, then run `npm ci` and `npm run verify` from the repository 
 | API version | `2026-07` |
 | Customer account extension | `weezy-account-reviews`, UID `56d88538-1336-4530-f00f-2041bb6da9b55097bd3c`, API version `2026-10` |
 | Customer account targets | `customer-account.order-index.block.render`, `customer-account.order-status.block.render` |
-| Scopes | `read_products,write_products,read_customers,write_customers,customer_read_orders` (`customer_read_orders` added for the review blocks; it takes effect on the next authorized deploy) |
+| Scopes | `read_products,write_products,read_customers,write_customers,customer_read_orders,customer_read_customers` (`customer_read_orders` added for the review blocks; `customer_read_customers` added 19 Nov 2026 because the Orders page block reads `customer { orders }`, and the Customer Account API's `Customer` object needs it; each takes effect on an authorized deploy and the store accepting it) |
 | Authentication | Online staff-context direct Admin API |
 
 These identifiers are public configuration, not passwords. No secrets are needed to build the extension. Shopify login is needed to deploy; private CLI session state must remain outside Git.
@@ -38,7 +38,7 @@ These identifiers are public configuration, not passwords. No secrets are needed
 
 The `weezy-account-reviews` extension ships with the app on `npm run deploy`. Deploying it, and each step below, needs Pete's go-ahead. Until the blocks are placed, customers see nothing.
 
-1. **Protected customer data.** In the Dev Dashboard for this app, request protected customer data access and tick the fields the blocks need: orders, Level 1 (no name, email, phone or address fields; the queries ask for none). The `customer_read_orders` scope arrives with the deploy and the store accepts it when prompted.
+1. **Protected customer data.** In the Dev Dashboard for this app, request protected customer data access and tick the fields the blocks need: orders, Level 1 (no name, email, phone or address fields; the queries ask for none). The `customer_read_orders` and `customer_read_customers` scopes arrive with the deploy and the store accepts them when prompted. Without `customer_read_customers` the order page block still works (it reads `order(id:)`), but the Orders page block is refused and shows nothing.
 2. **Orders page.** Shopify admin, Settings > Checkout and accounts > Customize, Orders page: add the **Account reviews** app block above the order list. Once placed it always shows something when the orders can be read: the review strip, or a welcome with a SHOP NOW button to https://weezypop.com/ when there is nothing to review.
 3. **Order status page.** In the same editor, Order status page: add our **Account reviews** block above Judge.me's "Write a new review" block (Judge.me's primary placement, under the order summary).
 4. **Judge.me on the order cards.** In the same editor's Apps settings, show Judge.me's "Write a new review" as a secondary action next to "Buy again", and keep at most two actions per order card so it shows as a button, not in the ··· menu.

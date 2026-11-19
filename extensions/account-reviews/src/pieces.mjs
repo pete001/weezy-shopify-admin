@@ -24,8 +24,9 @@ export const RECENT_ORDERS = 50;
 // and a scalar or enum costs 0. Shopify documents a 7,500 point bucket per app, store and customer for the Customer
 // Account API (restored at 100 points a second), but the Admin API also refuses any single query that asks for more
 // than 1,000 points (MAX_COST_EXCEEDED), and the Customer Account API is assumed to do the same (not confirmed).
-// One request for all 50 orders asked for about 2,653 points and a real customer's Orders page then showed nothing,
-// while the order page's query (about 103 points) worked. So the Orders page reads its orders in pages:
+// One request for all 50 orders would ask for about 2,653 points, so the Orders page reads its orders in pages. (A real
+// customer's Orders page showed nothing; paging did not change that. The cause was access: `customer { ... }` needs
+// the customer_read_customers scope, while the order page's `order(id:)` needs only customer_read_orders.)
 //   one order:  1 + lineItems (2 + RECENT_ORDER_LINES x (line 1 + image 1)) = 1 + 2 + 25 x 2 = 53
 //   one page:   customer 1 + orders (2 + RECENT_ORDERS_PAGE x 53) + pageInfo 1 = 1 + 2 + 530 + 1 = 534
 //   all pages:  at most 5 pages of 10, about 2,670 points, well inside the 7,500 point bucket.
