@@ -3,7 +3,9 @@
 // once fulfilled as a whole, as Judge.me's form needs (pieces.mjs). Which products are already reviewed comes from
 // the app service; without it, the block falls back to pieces from recent counted orders.
 // When the orders answer but there is nothing to review (no orders yet included), it shows a welcome with a button to
-// the shop instead, so the page is never bare. Shows nothing while loading or on any orders error.
+// the shop instead, so the page is never bare. Shows nothing while loading or on any orders error. Orders are read
+// RECENT_ORDERS_PAGE at a time (readRecentOrders); if a later page fails, the pieces from the orders already read
+// still show, but never the welcome (ordersBlockView).
 import '@shopify/ui-extensions/preact';
 // This target has no Order API; orders come from fetch(). Its standard API carries the session token.
 import type {Api} from '@shopify/ui-extensions/customer-account.order-index.block.render';
@@ -11,12 +13,12 @@ declare const shopify: Api;
 import {render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {copy} from './copy.mjs';
-import {customerAccountQuery, GRID_COLUMNS, ordersBlockView, RECENT_ORDERS, RECENT_ORDERS_QUERY, SHOP_URL, stripPieces} from './pieces.mjs';
+import {GRID_COLUMNS, ordersBlockView, readRecentOrders, SHOP_URL, stripPieces} from './pieces.mjs';
 import {loadReviewed} from './reviewed.mjs';
 
 type Piece = {productId:string;title:string;imageUrl:string|null;imageAlt:string;orderId:string;href:string};
 type Strip = {pieces:Piece[];more:number};
-type OrdersState = {status:'loading'}|{status:'failed'}|{status:'ready';strip:Strip};
+type OrdersState = {status:'loading'}|{status:'failed'}|{status:'ready';strip:Strip;partial:boolean};
 
 export default async function extension(){render(<OrdersStrip/>,document.body);}
 // A fresh session token for this customer, for the app service (Shopify caches it until it expires).
@@ -27,10 +29,10 @@ export function OrdersStrip(){
   useEffect(()=>{
     let live=true;
     Promise.all([
-      customerAccountQuery(fetch,RECENT_ORDERS_QUERY,{first:RECENT_ORDERS}),
+      readRecentOrders(fetch),
       loadReviewed({fetchImpl:fetch,getToken:sessionToken}),
     ])
-      .then(([data,reviewed]:[any,Set<string>|null])=>{if(live)setState({status:'ready',strip:stripPieces(data?.customer?.orders?.nodes,reviewed) as Strip});})
+      .then(([read,reviewed]:[{orders:any[];partial:boolean},Set<string>|null])=>{if(live)setState({status:'ready',strip:stripPieces(read.orders,reviewed) as Strip,partial:read.partial});})
       .catch(()=>{if(live)setState({status:'failed'});});
     return ()=>{live=false;};
   },[]);
