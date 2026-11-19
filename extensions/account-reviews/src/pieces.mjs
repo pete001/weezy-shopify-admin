@@ -10,14 +10,28 @@
 //
 // When the orders answer but nothing is left to review (no orders at all included), the Orders page shows a welcome
 // with a button to the shop instead (ordersBlockView). The order page shows nothing then.
+//
+// The Orders page reads the customer's orders a page at a time (readRecentOrders), so that no single request asks for
+// too many query cost points (see RECENT_ORDERS_PAGE).
 
 export const REVIEW_WINDOW_DAYS = 60; // fallback only
 export const MAX_PIECES = 6; // Orders page strip, fallback only
 export const MAX_UNREVIEWED = 12; // Orders page strip, with the reviewed set
 export const MAX_ORDER_PHOTOS = 12; // order page photo row
+// Orders the Orders page reads in all, newest first, RECENT_ORDERS_PAGE at a time.
 export const RECENT_ORDERS = 50;
-// Line items read per order on the Orders page. 50 orders of 50 lines each would ask for about the whole of a
-// customer's 7,500 point query budget, so the strip reads fewer lines per order. The order page reads 50.
+// Query cost, counted as Shopify does: a connection costs 2 plus `first` times the cost of one node, an object costs 1
+// and a scalar or enum costs 0. Shopify documents a 7,500 point bucket per app, store and customer for the Customer
+// Account API (restored at 100 points a second), but the Admin API also refuses any single query that asks for more
+// than 1,000 points (MAX_COST_EXCEEDED), and the Customer Account API is assumed to do the same (not confirmed).
+// One request for all 50 orders asked for about 2,653 points and a real customer's Orders page then showed nothing,
+// while the order page's query (about 103 points) worked. So the Orders page reads its orders in pages:
+//   one order:  1 + lineItems (2 + RECENT_ORDER_LINES x (line 1 + image 1)) = 1 + 2 + 25 x 2 = 53
+//   one page:   customer 1 + orders (2 + RECENT_ORDERS_PAGE x 53) + pageInfo 1 = 1 + 2 + 530 + 1 = 534
+//   all pages:  at most 5 pages of 10, about 2,670 points, well inside the 7,500 point bucket.
+// tests/account-reviews.test.mjs works these out from the query text and keeps every request under 1,000.
+export const RECENT_ORDERS_PAGE = 10;
+// Line items read per order on the Orders page; fewer than the order page's 50 keeps each page small.
 export const RECENT_ORDER_LINES = 25;
 
 // The Orders page strip's columns: two on phones, three once the block is wider than 480px.
@@ -36,9 +50,10 @@ const LINE_FIELDS = `productId
           giftCard
           image { url(transform: {maxWidth: 400, maxHeight: 400}) altText }`;
 
-export const RECENT_ORDERS_QUERY = `query RecentOrdersForReview($first: Int!) {
+export const RECENT_ORDERS_QUERY = `query RecentOrdersForReview($first: Int!, $after: String) {
   customer {
-    orders(first: $first, sortKey: PROCESSED_AT, reverse: true) {
+    orders(first: $first, after: $after, sortKey: PROCESSED_AT, reverse: true) {
+      pageInfo { hasNextPage endCursor }
       nodes {
         id
         processedAt
@@ -79,6 +94,45 @@ export async function customerAccountQuery(fetchImpl, query, variables) {
   if (json?.errors?.length) throw new Error('Customer Account API returned errors');
   if (!json?.data) throw new Error('Customer Account API returned no data');
   return json.data;
+}
+
+// The Orders page's orders, newest first: up to `max`, read `pageSize` at a time, one request after another, stopping
+// when there is no next page. Gives {orders, partial}.
+//   - The first page failing throws, as one query did before: the block then shows nothing.
+//   - A later page failing keeps the orders already read, the newest ones, with partial: true. Pieces from them are
+//     better than nothing, but they are not the whole story, so ordersBlockView never shows the welcome for a partial
+//     read. A next page promised without a cursor, an empty page that promises more, or running out of requests
+//     before `max` also count as partial.
+/**
+ * @param {(url: string, init: any) => Promise<any>} fetchImpl
+ * @param {{pageSize?: number, max?: number}} [options]
+ * @returns {Promise<{orders: any[], partial: boolean}>}
+ */
+export async function readRecentOrders(fetchImpl, {pageSize = RECENT_ORDERS_PAGE, max = RECENT_ORDERS} = {}) {
+  /** @type {any[]} */
+  const orders = [];
+  const requests = Math.ceil(max / pageSize);
+  /** @type {string|null} */
+  let after = null;
+  for (let page = 0; page < requests; page += 1) {
+    const first = Math.min(pageSize, max - orders.length);
+    let connection;
+    try {
+      const data = await customerAccountQuery(fetchImpl, RECENT_ORDERS_QUERY, after ? {first, after} : {first});
+      connection = data?.customer?.orders;
+    } catch (error) {
+      if (page === 0) throw error;
+      return {orders, partial: true};
+    }
+    if (!connection) return {orders, partial: page > 0}; // the first page with no orders list: none, as before
+    const nodes = Array.isArray(connection.nodes) ? connection.nodes.slice(0, first) : [];
+    orders.push(...nodes);
+    if (orders.length >= max || !connection.pageInfo?.hasNextPage) return {orders, partial: false};
+    const cursor = connection.pageInfo.endCursor;
+    if (!nodes.length || typeof cursor !== 'string' || !cursor || cursor === after) return {orders, partial: true};
+    after = cursor;
+  }
+  return {orders, partial: true};
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -211,12 +265,16 @@ export function orderPieces(order, {max = MAX_ORDER_PHOTOS, reviewed = null, now
 export const SHOP_URL = 'https://weezypop.com/';
 
 // What the Orders page block shows, from the state of its orders query:
-//   {status: 'loading'}                        nothing yet
-//   {status: 'failed'}                         nothing: an orders error never shows a welcome by mistake
-//   {status: 'ready', strip: {pieces, more}}   'strip' when there are pieces to review, otherwise 'welcome'
-//                                              (no orders, or every piece reviewed), so the page is never bare
+//   {status: 'loading'}                                  nothing yet
+//   {status: 'failed'}                                   nothing: an orders error never shows a welcome by mistake
+//   {status: 'ready', strip: {pieces, more}, partial}    'strip' when there are pieces to review. Otherwise 'welcome'
+//                                                        (no orders, or every piece reviewed), so the page is never
+//                                                        bare, but only when every page was read: after a later page
+//                                                        failed (partial, from readRecentOrders) it shows nothing,
+//                                                        as the unread orders might have pieces to review.
 /** @param {any} state @returns {'strip'|'welcome'|null} */
 export function ordersBlockView(state) {
   if (!state || state.status !== 'ready') return null;
-  return state.strip?.pieces?.length ? 'strip' : 'welcome';
+  if (state.strip?.pieces?.length) return 'strip';
+  return state.partial ? null : 'welcome';
 }
