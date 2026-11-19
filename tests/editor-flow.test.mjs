@@ -300,17 +300,17 @@ test('the charm cut-out is a draft until saved, previews the link and stores onl
  await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
  await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
  await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Charm cut-out')&&text().includes('No cut-out yet'));
- const field=()=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')==='Cut-out link from Shopify Files');
+ const field=()=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')==='Gold cut-out link from Shopify Files');
  const media=JSON.stringify(products[1].media),before=writes;
  field().value='https://example.com/beta.png';field().dispatchEvent(new Event('input'));
- await until(()=>!!field().getAttribute('error'));assert.ok(by('s-button','Save cut-out').getAttribute('disabled')!=null);assert.equal(writes,before);
+ await until(()=>!!field().getAttribute('error'));assert.ok(by('s-button','Save gold cut-out').getAttribute('disabled')!=null);assert.equal(writes,before);
  const png='https://cdn.shopify.com/s/files/1/0904/files/beta-cutout.png?v=1';
  field().value=png;field().dispatchEvent(new Event('input'));
- await until(()=>text().includes('Unsaved cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png));
+ await until(()=>text().includes('Unsaved gold cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png));
  assert.equal(writes,before);assert.equal(await go('/order'),false);
- click('s-button','Save cut-out');await until(()=>text().includes('Cut-out saved')&&JSON.parse(products[1].appImages.value).appCutout===png);
+ click('s-button','Save gold cut-out');await until(()=>text().includes('Cut-out saved')&&JSON.parse(products[1].appImages.value).appCutout===png);
  assert.ok(text().includes('Beta')&&text().includes(' · Cut-out'));
- click('s-button','Remove cut-out');await until(()=>text().includes('Saving removes your cut-out'));click('s-button','Save · remove my cut-out');
+ click('s-button','Remove gold cut-out');await until(()=>text().includes('Saving removes your gold cut-out'));click('s-button','Save · remove my gold cut-out');
  await until(()=>text().includes('No cut-out yet')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
  assert.equal(JSON.stringify(products[1].media),media);
 });
@@ -324,6 +324,34 @@ test('a to-do opens its list filtered to just what is left, with its progress an
  click('s-button','Show every product');await until(()=>!text().includes('To do: products to check'));
  assert.ok(Number(text().match(/(\d+) matching products/)[1])>left,'every product is back');
  products[2].appImages=saved;
+});
+
+test('the silver cut-out is its own draft beside the gold one, saves as appCutoutSilver and leaves the gold one alone',async()=>{
+ await go('/images');const beta=()=>nodes().find(n=>n.localName==='s-clickable'&&n.getAttribute('accessibilityLabel')?.startsWith('Open Beta'));
+ await until(()=>beta()&&!beta().getAttribute('disabled'));beta().dispatchEvent(new Event('click'));
+ await until(()=>nodes().some(n=>n.localName==='s-section'&&n.getAttribute('heading')==='Beta')&&text().includes('Silver cut-out')&&text().includes('No silver cut-out yet'));
+ const field=label=>nodes().find(n=>n.localName==='s-text-field'&&n.getAttribute('label')===label);
+ const silver=()=>field('Silver cut-out link from Shopify Files'),gold=()=>field('Gold cut-out link from Shopify Files');
+ const media=JSON.stringify(products[1].media),before=writes,goldPNG='https://cdn.shopify.com/s/files/1/0904/files/beta-gold.png?v=1';
+ // A gold cut-out saved first, so the silver save must keep it.
+ gold().value=goldPNG;gold().dispatchEvent(new Event('input'));await until(()=>text().includes('Unsaved gold cut-out'));click('s-button','Save gold cut-out');
+ await until(()=>JSON.parse(products[1].appImages?.value??'{}').appCutout===goldPNG&&text().includes('Cut-out saved'));
+ const afterGold=writes;
+ silver().value='https://cdn.shopify.com/s/files/1/beta-silver.jpg';silver().dispatchEvent(new Event('input'));
+ await until(()=>!!silver().getAttribute('error'));assert.ok(by('s-button','Save silver cut-out').getAttribute('disabled')!=null);assert.equal(writes,afterGold);
+ const png='https://cdn.shopify.com/s/files/1/0904/files/beta-silver.png?v=1';
+ silver().value=png;silver().dispatchEvent(new Event('input'));
+ await until(()=>text().includes('Unsaved silver cut-out')&&nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png));
+ assert.equal(writes,afterGold);assert.equal(await go('/order'),false,'an unsaved silver link blocks leaving the page');
+ click('s-button','Save silver cut-out');await until(()=>text().includes('Silver cut-out saved')&&JSON.parse(products[1].appImages.value).appCutoutSilver===png);
+ assert.equal(JSON.parse(products[1].appImages.value).appCutout,goldPNG,'the gold cut-out is kept');
+ assert.ok(nodes().some(n=>n.localName==='s-image'&&n.getAttribute('src')===png&&n.getAttribute('alt')==='Beta: saved silver cut-out'),'the saved silver cut-out is read back from Shopify');
+ click('s-button','Remove silver cut-out');await until(()=>text().includes('Saving removes your silver cut-out'));click('s-button','Save · remove my silver cut-out');
+ await until(()=>text().includes('No silver cut-out yet')&&!('appCutoutSilver' in JSON.parse(products[1].appImages.value)));
+ assert.equal(JSON.parse(products[1].appImages.value).appCutout,goldPNG);
+ click('s-button','Remove gold cut-out');await until(()=>text().includes('Saving removes your gold cut-out'));click('s-button','Save · remove my gold cut-out');
+ await until(()=>text().includes('No cut-out yet')&&!('appCutout' in JSON.parse(products[1].appImages.value)));
+ assert.ok(writes>before);assert.equal(JSON.stringify(products[1].media),media);
 });
 
 test('a cut-out built into the app shows as the charm’s cut-out, with nothing to do',async()=>{
