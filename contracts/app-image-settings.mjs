@@ -6,8 +6,9 @@ export const IMAGE_MEDIA = 'media(first:250){nodes{... on MediaImage{id image{ur
 export const imageURL = value => {
   try { const u=new URL(value); return u.protocol==='https:'&&u.hostname==='cdn.shopify.com'&&u.pathname.startsWith('/s/files/')&&!u.username&&!u.password ? u.href : undefined; } catch { return undefined; }
 };
-// An optional transparent cut-out of the charm on its gold connector loop, for the app's set chain.
-// Staff upload it to Shopify Files and paste its link: the editor has no files scope.
+// An optional transparent cut-out of the charm on its gold connector loop, for the app's set chain, and (since
+// 19 Nov 2026) one on its silver connector loop, for the website's builder and try-on in silver. Both are checked here.
+// Staff upload them to Shopify Files and paste the link: the editor has no files scope.
 export const cutoutURL = value => {
   const safe=typeof value==='string'&&value.length<=2048?imageURL(value.trim()):undefined;
   return safe&&/\.(png|webp)$/i.test(new URL(safe).pathname) ? safe : undefined;
@@ -48,14 +49,15 @@ export function productImages(product,{heroURL}={}) {
 
 export const APP_CATEGORIES = ['charms','earrings','sets','accessories','chains'];
 export function readAppListing(field) {
-  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null,cutoutHeightMm:null};
+  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null,cutoutSilverImageURL:null,cutoutHeightMm:null};
   readImageSettings(field);
   const value=JSON.parse(field.value);
   if(value.appHidden!==undefined&&typeof value.appHidden!=='boolean' || value.appCategory!=null&&!APP_CATEGORIES.includes(value.appCategory)) throw Error('Invalid app product settings');
   if(value.appStory!=null&&(typeof value.appStory!=='string'||value.appStory.length>1800||!value.appStory.trim()))throw Error('Invalid app story');
   if(value.appCutout!=null&&cutoutURL(value.appCutout)!==value.appCutout)throw Error('Invalid app cutout');
+  if(value.appCutoutSilver!=null&&cutoutURL(value.appCutoutSilver)!==value.appCutoutSilver)throw Error('Invalid silver cutout');
   if(value.appCutoutHeightMm!=null&&(typeof value.appCutoutHeightMm!=='number'||cutoutHeight(value.appCutoutHeightMm)!==value.appCutoutHeightMm))throw Error('Invalid charm size');
-  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null,cutoutHeightMm:value.appCutoutHeightMm??null};
+  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null,cutoutSilverImageURL:value.appCutoutSilver??null,cutoutHeightMm:value.appCutoutHeightMm??null};
 }
 export function defaultAppCategory(product) {
   const title=(product.title??'').toLowerCase(),type=(product.productType??'').toLowerCase();

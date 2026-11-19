@@ -1,23 +1,31 @@
 import {useEffect,useState} from 'preact/hooks';
 import {Button,TextField} from './Controls';
 import {cutoutURL,cutoutHeight} from '../../../contracts/app-image-settings.mjs';
-export type CutoutProduct={id:string;title:string;cutoutImageURL:string|null;cutoutHeightMm?:number|null;images:{url:string;hidden:boolean}[]};
+export type CutoutProduct={id:string;title:string;cutoutImageURL:string|null;cutoutSilverImageURL?:string|null;cutoutHeightMm?:number|null;images:{url:string;hidden:boolean}[]};
 // The app hangs this transparent cut-out on the set chain, the share pictures and the moment after buying. It uses,
 // in turn: one saved here, the one built into the app (`builtInURL`, from the app service), the cover photo in a
-// round frame. The editor has no files scope, so staff paste a Shopify Files link.
-export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSize,onDraftChange}:{product:CutoutProduct;builtInURL?:string|null;disabled:boolean;onSave:(url:string|null)=>Promise<boolean>;onSaveSize:(mm:number|null)=>Promise<boolean>;onDraftChange:(dirty:boolean)=>void}){
+// round frame. The editor has no files scope, so staff paste a Shopify Files link. The charm on its silver loop
+// (`cutoutSilverImageURL`) is a second link, for the website's builder and try-on in silver; the size is shared.
+export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSilver,onSaveSize,onDraftChange}:{product:CutoutProduct;builtInURL?:string|null;disabled:boolean;onSave:(url:string|null)=>Promise<boolean>;onSaveSilver:(url:string|null)=>Promise<boolean>;onSaveSize:(mm:number|null)=>Promise<boolean>;onDraftChange:(dirty:boolean)=>void}){
  const [draft,setDraft]=useState(product.cutoutImageURL??''),[saving,setSaving]=useState(false);
  // The charm's real size: its hanging height in mm. The website's builder and the app draw it at this size.
  const savedSize=product.cutoutHeightMm!=null?String(product.cutoutHeightMm):'';
  const [sizeDraft,setSizeDraft]=useState(savedSize),[savingSize,setSavingSize]=useState(false);
  const sizeDirty=sizeDraft.trim()!==savedSize,sizeValid=!sizeDraft.trim()||cutoutHeight(sizeDraft)!==undefined;
- function changeSize(value:string){setSizeDraft(value);onDraftChange(value.trim()!==savedSize||draft.trim()!==(product.cutoutImageURL??''));}
+ function changeSize(value:string){setSizeDraft(value);onDraftChange(value.trim()!==savedSize||draft.trim()!==(product.cutoutImageURL??'')||silverDraft.trim()!==savedSilver);}
  async function saveSize(){if(!sizeDirty||!sizeValid||disabled||savingSize)return;setSavingSize(true);try{if(await onSaveSize(sizeDraft.trim()?cutoutHeight(sizeDraft)??null:null))onDraftChange(false);}finally{setSavingSize(false);}}
  const saved=product.cutoutImageURL??'',dirty=draft.trim()!==saved,valid=!draft.trim()||!!cutoutURL(draft),preview=cutoutURL(draft);
  const cover=product.images.find(p=>!p.hidden)?.url,blocked=disabled||saving;
+ // The silver cut-out: its own draft, checked and saved like the gold one.
+ const savedSilver=product.cutoutSilverImageURL??'';
+ const [silverDraft,setSilverDraft]=useState(savedSilver),[savingSilver,setSavingSilver]=useState(false);
+ const silverDirty=silverDraft.trim()!==savedSilver,silverValid=!silverDraft.trim()||!!cutoutURL(silverDraft),silverPreview=cutoutURL(silverDraft);
+ const silverBlocked=disabled||savingSilver,removingSilver=silverDirty&&!silverDraft.trim();
+ function changeSilver(value:string){setSilverDraft(value);onDraftChange(value.trim()!==savedSilver);}
+ async function saveSilver(){if(!silverDirty||!silverValid||silverBlocked)return;setSavingSilver(true);try{if(await onSaveSilver(silverDraft.trim()?cutoutURL(silverDraft)??null:null))onDraftChange(false);}finally{setSavingSilver(false);}}
  // The page's unsaved-changes guard follows the draft itself, after every render, so it stays right however
  // the editor is mounted (Preact 11 can remount it while the draft is still on screen); leaving clears it.
- useEffect(()=>{onDraftChange(dirty||sizeDirty);});
+ useEffect(()=>{onDraftChange(dirty||sizeDirty||silverDirty);});
  useEffect(()=>()=>onDraftChange(false),[]);
  function change(value:string){setDraft(value);onDraftChange(value.trim()!==saved);}
  async function save(){if(!dirty||!valid||blocked)return;setSaving(true);try{if(await onSave(draft.trim()?cutoutURL(draft)??null:null))onDraftChange(false);}finally{setSaving(false);}}
@@ -27,15 +35,15 @@ export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSize,onDra
   :{img:cover,badge:'No cut-out yet',tone:'warning',text:'Until you add one, the app shows the cover photo in a round frame. Follow the steps below.'};
  const removing=dirty&&!draft.trim();
  return <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
-  <s-heading>Charm cut-out</s-heading>
-  <s-paragraph>A transparent PNG of the charm on its gold loop. The app hangs it on the set chain and uses it in the share pictures and the moment after buying.</s-paragraph>
+  <s-heading>Charm cut-outs</s-heading>
+  <s-paragraph>Transparent PNGs of the charm, one on its gold loop and one on its silver loop. The app hangs the gold one on the set chain and uses it in the share pictures and the moment after buying. The website’s necklace builder and try-on show the one for the hardware the customer picks.</s-paragraph>
   <s-grid gridTemplateColumns="minmax(0, 160px) minmax(0, 1fr)" gap="base" alignItems="center">
    <s-box padding="small" border="base" borderRadius="large" background="subdued">{now.img?<s-image src={now.img} alt={`${product.title}: what the app shows now`} aspectRatio="1" objectFit={saved||builtInURL?'contain':'cover'} borderRadius={saved||builtInURL?undefined:'large-200'}/>:<s-paragraph>No visible photo.</s-paragraph>}</s-box>
    <s-stack gap="small"><s-text type="strong">What the app shows now</s-text><s-badge tone={now.tone as any}>{now.badge}</s-badge><s-paragraph>{now.text}</s-paragraph></s-stack>
   </s-grid>
   <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
    <s-heading>Charm size</s-heading>
-   <s-paragraph>The charm’s hanging height: measure from the top of the connector to the bottom of the charm. The website’s builder and the app draw it at this size on the 15″ chain, so customers see how big it really is.</s-paragraph>
+   <s-paragraph>The charm’s hanging height: measure from the top of the connector to the bottom of the charm. The website’s builder and the app draw it at this size on the 15″ chain, so customers see how big it really is. It applies to both the gold and the silver cut-out.</s-paragraph>
    <s-stack direction="inline" gap="base" alignItems="end">
     <TextField label="Hanging height (mm)" value={sizeDraft} disabled={disabled||savingSize} placeholder="e.g. 32" error={sizeValid?undefined:'Use a number of millimetres between 5 and 120.'} onInput={e=>changeSize(e.currentTarget.value)}/>
     <Button variant="primary" loading={savingSize} disabled={!sizeDirty||!sizeValid||disabled||savingSize} onClick={saveSize}>{sizeDirty&&!sizeDraft.trim()?'Save · remove size':'Save size'}</Button>
@@ -44,23 +52,48 @@ export function Cutout({product,builtInURL=null,disabled,onSave,onSaveSize,onDra
    {!sizeDirty&&!savedSize?<s-badge tone="warning">No size yet: drawn at a typical 32 mm</s-badge>:!sizeDirty?<s-badge tone="success">{`Saved: ${savedSize} mm`}</s-badge>:null}
   </s-stack></s-box>
   <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
-   <s-heading>{saved?'Change your cut-out':builtInURL?'Replace it with your own (optional)':'Add a cut-out'}</s-heading>
-   <s-stack gap="small-200"><s-text type="strong">1. Upload the transparent PNG to Shopify Files</s-text><s-stack direction="inline"><Button href="shopify:admin/content/files">Open Shopify Files</Button></s-stack></s-stack>
+   <s-heading>{saved?'Change your gold cut-out':builtInURL?'Replace it with your own (optional)':'Add the gold cut-out'}</s-heading>
+   <s-stack gap="small-200"><s-text type="strong">1. Upload the transparent PNG of the charm on its gold loop to Shopify Files</s-text><s-stack direction="inline"><Button href="shopify:admin/content/files">Open Shopify Files</Button></s-stack></s-stack>
    <s-stack gap="small-200"><s-text type="strong">2. Copy its link</s-text><s-text color="subdued">In Files, find the PNG and click its link icon (Copy link).</s-text></s-stack>
    <s-stack gap="small-200"><s-text type="strong">3. Paste the link here</s-text>
-    <TextField label="Cut-out link from Shopify Files" value={draft} disabled={blocked} placeholder="https://cdn.shopify.com/s/files/…/charm.png" error={valid?undefined:'Use a Shopify Files link to a PNG or WebP image. It starts with https://cdn.shopify.com/s/files/.'} onInput={e=>change(e.currentTarget.value)}/></s-stack>
+    <TextField label="Gold cut-out link from Shopify Files" value={draft} disabled={blocked} placeholder="https://cdn.shopify.com/s/files/…/charm.png" error={valid?undefined:'Use a Shopify Files link to a PNG or WebP image. It starts with https://cdn.shopify.com/s/files/.'} onInput={e=>change(e.currentTarget.value)}/></s-stack>
    <s-stack gap="base">{dirty&&preview?<s-grid gridTemplateColumns="minmax(0, 160px) minmax(0, 1fr)" gap="base" alignItems="center">
     <s-box padding="small" border="base" borderRadius="large" background="subdued"><s-image src={preview} alt={`${product.title} cut-out`} aspectRatio="1" objectFit="contain"/></s-box>
-    <s-stack gap="small"><s-badge tone="warning">Unsaved cut-out</s-badge><s-paragraph>Check it’s the right charm on a clear background, then save.</s-paragraph></s-stack>
+    <s-stack gap="small"><s-badge tone="warning">Unsaved gold cut-out</s-badge><s-paragraph>Check it’s the right charm on a clear background, then save.</s-paragraph></s-stack>
    </s-grid>:null}
-   {removing?<s-banner tone="warning">Saving removes your cut-out. The app will show {builtInURL?'the cut-out built into the app':'the cover photo in a round frame'}.</s-banner>:null}</s-stack>
+   {removing?<s-banner tone="warning">Saving removes your gold cut-out. The app will show {builtInURL?'the cut-out built into the app':'the cover photo in a round frame'}.</s-banner>:null}</s-stack>
    <s-stack gap="small-200"><s-text type="strong">4. Check the preview, then save</s-text>
     <s-stack direction="inline" gap="base">
-     <Button variant="primary" loading={saving} disabled={!dirty||!valid||blocked} onClick={save}>{removing?'Save · remove my cut-out':'Save cut-out'}</Button>
-     {dirty?<Button disabled={blocked} onClick={()=>change(saved)}>Cancel</Button>:null}
-     {saved&&!removing?<Button disabled={blocked} onClick={()=>change('')}>Remove cut-out</Button>:null}
+     <Button variant="primary" loading={saving} disabled={!dirty||!valid||blocked} onClick={save}>{removing?'Save · remove my gold cut-out':'Save gold cut-out'}</Button>
+     {dirty?<Button disabled={blocked} accessibilityLabel="Cancel gold cut-out changes" onClick={()=>change(saved)}>Cancel</Button>:null}
+     {saved&&!removing?<Button disabled={blocked} onClick={()=>change('')}>Remove gold cut-out</Button>:null}
     </s-stack>
     {!dirty&&!saved?<s-text color="subdued">Paste a link in step 3 to save.</s-text>:null}
+   </s-stack>
+  </s-stack></s-box>
+  <s-box padding="base" border="base" borderRadius="large"><s-stack gap="base">
+   <s-heading>Silver cut-out</s-heading>
+   <s-paragraph>The same charm on its silver loop, cropped tight to the charm and its connector like the gold one. The website’s necklace builder and try-on show it when a customer picks silver hardware.</s-paragraph>
+   <s-grid gridTemplateColumns="minmax(0, 160px) minmax(0, 1fr)" gap="base" alignItems="center">
+    <s-box padding="small" border="base" borderRadius="large" background="subdued">{savedSilver?<s-image src={savedSilver} alt={`${product.title}: saved silver cut-out`} aspectRatio="1" objectFit="contain"/>:<s-paragraph>No silver cut-out.</s-paragraph>}</s-box>
+    <s-stack gap="small">{savedSilver?<><s-badge tone="success">Silver cut-out saved</s-badge><s-paragraph>Your silver cut-out, saved in Shopify.</s-paragraph></>:<><s-badge tone="warning">No silver cut-out yet</s-badge><s-paragraph>Add one so customers can see this charm on silver hardware. Follow the steps below.</s-paragraph></>}</s-stack>
+   </s-grid>
+   <s-stack gap="small-200"><s-text type="strong">1. Upload the transparent PNG of the charm on its silver loop to Shopify Files</s-text><s-stack direction="inline"><Button href="shopify:admin/content/files">Open Shopify Files</Button></s-stack></s-stack>
+   <s-stack gap="small-200"><s-text type="strong">2. Copy its link</s-text><s-text color="subdued">In Files, find the PNG and click its link icon (Copy link).</s-text></s-stack>
+   <s-stack gap="small-200"><s-text type="strong">3. Paste the link here</s-text>
+    <TextField label="Silver cut-out link from Shopify Files" value={silverDraft} disabled={silverBlocked} placeholder="https://cdn.shopify.com/s/files/…/charm-silver.png" error={silverValid?undefined:'Use a Shopify Files link to a PNG or WebP image. It starts with https://cdn.shopify.com/s/files/.'} onInput={e=>changeSilver(e.currentTarget.value)}/></s-stack>
+   <s-stack gap="base">{silverDirty&&silverPreview?<s-grid gridTemplateColumns="minmax(0, 160px) minmax(0, 1fr)" gap="base" alignItems="center">
+    <s-box padding="small" border="base" borderRadius="large" background="subdued"><s-image src={silverPreview} alt={`${product.title} silver cut-out`} aspectRatio="1" objectFit="contain"/></s-box>
+    <s-stack gap="small"><s-badge tone="warning">Unsaved silver cut-out</s-badge><s-paragraph>Check it’s the right charm on its silver loop, on a clear background, then save.</s-paragraph></s-stack>
+   </s-grid>:null}
+   {removingSilver?<s-banner tone="warning">Saving removes your silver cut-out from Shopify.</s-banner>:null}</s-stack>
+   <s-stack gap="small-200"><s-text type="strong">4. Check the preview, then save</s-text>
+    <s-stack direction="inline" gap="base">
+     <Button variant="primary" loading={savingSilver} disabled={!silverDirty||!silverValid||silverBlocked} onClick={saveSilver}>{removingSilver?'Save · remove my silver cut-out':'Save silver cut-out'}</Button>
+     {silverDirty?<Button disabled={silverBlocked} accessibilityLabel="Cancel silver cut-out changes" onClick={()=>changeSilver(savedSilver)}>Cancel</Button>:null}
+     {savedSilver&&!removingSilver?<Button disabled={silverBlocked} onClick={()=>changeSilver('')}>Remove silver cut-out</Button>:null}
+    </s-stack>
+    {!silverDirty&&!savedSilver?<s-text color="subdued">Paste a link in step 3 to save.</s-text>:null}
    </s-stack>
   </s-stack></s-box>
  </s-stack></s-box>;

@@ -58,10 +58,13 @@ export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
       const cutout=Object.hasOwn(input,'cutoutImageURL')?input.cutoutImageURL:current.cutoutImageURL;
       const appCutout=cutout===null||cutout===''?null:cutoutURL(cutout);
       if(appCutout===undefined)throw fail(400,'Paste the Shopify Files link of a PNG or WebP cut-out (it starts with https://cdn.shopify.com/s/files/).');
+      const silver=Object.hasOwn(input,'cutoutSilverImageURL')?input.cutoutSilverImageURL:current.cutoutSilverImageURL;
+      const appCutoutSilver=silver===null||silver===''?null:cutoutURL(silver);
+      if(appCutoutSilver===undefined)throw fail(400,'Paste the Shopify Files link of a PNG or WebP silver cut-out (it starts with https://cdn.shopify.com/s/files/).');
       const height=Object.hasOwn(input,'cutoutHeightMm')?input.cutoutHeightMm:current.cutoutHeightMm;
       const appCutoutHeightMm=height===null||height===''?null:cutoutHeight(height);
       if(appCutoutHeightMm===undefined)throw fail(400,'Enter the charm’s hanging height in mm, between 5 and 120.');
-      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{}),...(appCutoutHeightMm!=null?{appCutoutHeightMm}:{})});
+      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{}),...(appCutoutSilver?{appCutoutSilver}:{}),...(appCutoutHeightMm!=null?{appCutoutHeightMm}:{})});
       const data=await query('mutation SaveAppImages($metafields:[MetafieldsSetInput!]!){metafieldsSet(metafields:$metafields){metafields{namespace key value compareDigest updatedAt}userErrors{code message}}}',{
         metafields:[{ownerId:before.id,namespace:IMAGE_NAMESPACE,key:IMAGE_KEY,type:'json',value,compareDigest:input.digest}]
       });

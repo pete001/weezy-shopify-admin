@@ -156,3 +156,40 @@ test('records without a size stay readable and a malformed stored size fails clo
  assert.equal(readAppListing(field({appCutoutHeightMm:22})).cutoutHeightMm,22);
  for(const appCutoutHeightMm of ['22',2,500,22.25,{mm:1}])assert.throws(()=>readAppListing(field({appCutoutHeightMm})),/size/);
 });
+test('an optional silver cut-out saves as appCutoutSilver beside the gold one, survives other edits and can be removed',async()=>{
+ const h=harness(),website=JSON.stringify(h.product.media),gold='https://cdn.shopify.com/s/files/1/0904/files/moon-cutout.png?v=1',silver='https://cdn.shopify.com/s/files/1/0904/files/moon-cutout-silver.png?v=1791284515';
+ let p=await h.api.get('123');assert.equal(p.cutoutSilverImageURL,null);
+ for(const bad of ['http://cdn.shopify.com/s/files/1/moon-silver.png','https://example.com/s/files/1/moon-silver.png','https://cdn.shopify.com/s/files/1/moon-silver.jpg','https://cdn.shopify.com/other/moon-silver.png','https://cdn.shopify.com/s/files/1/'+'x'.repeat(2048)+'.png',42]){
+  const writes=h.calls.filter(c=>c.query.startsWith('mutation')).length;
+  await assert.rejects(h.api.save('123',{...p,cutoutSilverImageURL:bad}),{status:400});
+  assert.equal(h.calls.filter(c=>c.query.startsWith('mutation')).length,writes);
+ }
+ p=await h.api.save('123',{...p,cutoutImageURL:gold,cutoutHeightMm:31.5});
+ p=await h.api.save('123',{...p,cutoutSilverImageURL:`  ${silver} `});assert.equal(p.cutoutSilverImageURL,silver);
+ const stored=JSON.parse(h.product.appImages.value);
+ assert.equal(stored.version,1);assert.equal(stored.appCutoutSilver,silver);assert.equal(stored.appCutout,gold);assert.equal(stored.appCutoutHeightMm,31.5);
+ assert.deepEqual(readAppListing(h.product.appImages),{appHidden:false,appCategory:'charms',appStory:null,cutoutImageURL:gold,cutoutSilverImageURL:silver,cutoutHeightMm:31.5});
+ // Saves of every other field keep it: photos, a listing change without the field, the story, the gold cut-out and the size.
+ p.images[1].hidden=true;p=await h.api.save('123',p);assert.equal(p.cutoutSilverImageURL,silver);
+ const {cutoutSilverImageURL:_,...withoutField}=p;p=await h.api.save('123',{...withoutField,appCategory:'earrings'});assert.equal(p.cutoutSilverImageURL,silver);
+ p=await h.api.save('123',{...p,appStory:'A short story.'});assert.equal(p.cutoutSilverImageURL,silver);
+ p=await h.api.save('123',{...p,cutoutImageURL:null});assert.equal(p.cutoutSilverImageURL,silver);assert.equal(p.cutoutImageURL,null);
+ p=await h.api.save('123',{...p,cutoutHeightMm:null});assert.equal(p.cutoutSilverImageURL,silver);
+ assert.equal(JSON.parse(h.product.appImages.value).appCutoutSilver,silver);
+ // Removing it keeps the gold cut-out.
+ p=await h.api.save('123',{...p,cutoutImageURL:gold});
+ p=await h.api.save('123',{...p,cutoutSilverImageURL:''});assert.equal(p.cutoutSilverImageURL,null);assert.equal(p.cutoutImageURL,gold);
+ assert.equal('appCutoutSilver' in JSON.parse(h.product.appImages.value),false);
+ assert.equal(JSON.stringify(h.product.media),website);
+ assert.doesNotMatch(h.calls.map(x=>x.query).join('\n'),/fileCreate|stagedUploadsCreate|productCreateMedia|productUpdate/);
+});
+test('version 1 records without a silver cut-out stay readable and a malformed stored silver cut-out fails closed',async()=>{
+ const field=value=>({type:'json',value:JSON.stringify({version:1,images:[],...value})});
+ assert.equal(readAppListing(field({})).cutoutSilverImageURL,null);assert.equal(readAppListing(null).cutoutSilverImageURL,null);
+ assert.equal(readAppListing(field({appCutout:'https://cdn.shopify.com/s/files/1/moon.png'})).cutoutSilverImageURL,null);
+ assert.equal(readAppListing(field({appCutoutSilver:'https://cdn.shopify.com/s/files/1/moon-silver.WEBP'})).cutoutSilverImageURL,'https://cdn.shopify.com/s/files/1/moon-silver.WEBP');
+ for(const appCutoutSilver of ['https://cdn.shopify.com/s/files/1/moon.gif',' https://cdn.shopify.com/s/files/1/moon.png','javascript:alert(1)','https://cdn.shopify.com/s/files/1/'+'x'.repeat(2048)+'.png',{url:'x'},true])assert.throws(()=>readAppListing(field({appCutoutSilver})),/silver cutout/);
+ // A malformed stored silver cut-out blocks the editor's save too, rather than being dropped silently.
+ const h=harness();h.product.appImages={type:'json',compareDigest:'d',value:JSON.stringify({version:1,images:[],appCutoutSilver:'https://example.com/moon.png'})};
+ await assert.rejects(h.api.get('123'),/silver cutout/);assert.ok(h.calls.every(x=>!x.query.startsWith('mutation')));
+});
