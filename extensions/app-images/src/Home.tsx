@@ -6,7 +6,7 @@ import {render} from 'preact';
 import {Sets} from './Sets';
 import {finishPhoto} from './photo-workflow.mjs';
 import {FinishPhotos} from './FinishPhotos';
-import {Cutout} from './Cutout';
+import {Cutout,type ColourCutouts} from './Cutout';
 import {Overview,areas,type Area,tasks,Progress} from './Overview';
 import {productTodos,todoFilter,todoProgress,withBuiltInCutouts} from './todos.mjs';
 import {readAppService,finishPhotoCheck,builtInCutouts} from './app-service.mjs';
@@ -18,13 +18,13 @@ import {createSetsEditor} from '../../../contracts/app-sets.mjs';
 import defaults from './bundled-sets.json';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {areaForPath,observeNavigation} from './navigation.mjs';
-import {createImageEditor} from '../../../contracts/app-image-editor.mjs';
+import {createImageEditor,withColourCutout} from '../../../contracts/app-image-editor.mjs';
 import bundled from './bundled-heroes.json';
 import {createEditorSession} from './session.mjs';
 
 type Photo = {id:string;url:string;alt:string;hidden:boolean};
 type Item = {id:string;title:string;handle:string;reviewed:boolean;appHidden:boolean;appCategory:string;imageURL?:string;cutoutImageURL?:string|null;cutoutSilverImageURL?:string|null;cutoutHeightMm?:number|null;builtInCutout?:string|null;appStory?:string|null};
-type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null;cutoutSilverImageURL:string|null;cutoutHeightMm:number|null};
+type Product = Item & {images:Photo[];shopifyURL:string;digest:string|null;variants:{id:string;title:string;imageURL?:string|null}[];appVariantImages:Record<string,string>;appStory:string|null;websiteDescription:string;cutoutImageURL:string|null;cutoutSilverImageURL:string|null;cutoutColours:ColourCutouts;colourOption:{name:string;values:string[]}|null;cutoutHeightMm:number|null};
 type State = {product:Product|null;status:string;error:string|null;notice:string|null};
 const api=createImageEditor({bundled,request:(query:string,variables:Record<string,unknown>)=>shopify.query(query,{variables})});
 const session=createEditorSession(api);
@@ -224,7 +224,7 @@ export function Home({onBlocked,mode='images'}:{onBlocked:(blocked:boolean)=>voi
         <SyncStatus kind="products" handle={product.handle} digest={product.digest} dirty={state.status==='saving'||!!state.error||draft}/>
         {mode==='images'?<>
         {todo!=='cutout'&&todo!=='size'?<ProductPreview product={product}/>:null}
-        <Cutout key={product.id} product={product} builtInURL={cutouts?.[product.handle]??null} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}} onSaveSilver={async url=>{session.editListing({cutoutSilverImageURL:url});return await session.flush();}} onSaveSize={async mm=>{session.editListing({cutoutHeightMm:mm});return await session.flush();}}/>
+        <Cutout key={product.id} product={product} builtInURL={cutouts?.[product.handle]??null} disabled={blocked||state.status==='saving'} onDraftChange={setCutoutDirty} onSave={async url=>{session.editListing({cutoutImageURL:url});return await session.flush();}} onSaveSilver={async url=>{session.editListing({cutoutSilverImageURL:url});return await session.flush();}} onSaveColour={async (colour,finish,url)=>{session.editListing({cutoutColours:withColourCutout((session.snapshot() as State).product?.cutoutColours??{},colour,finish,url)});return await session.flush();}} onSaveSize={async mm=>{session.editListing({cutoutHeightMm:mm});return await session.flush();}}/>
         {todo==='cutout'||todo==='size'?<ProductPreview product={product}/>:null}
         <s-paragraph>Click a photo to preview it. Use the labelled buttons to show, hide or reorder it. The first visible photo is the app cover.</s-paragraph>
         {state.notice?<s-banner tone="warning">{state.notice}</s-banner>:null}

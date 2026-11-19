@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createImageEditor} from './app-image-editor.mjs';
-import {productImages,appVariantImageURLs,readAppListing} from './app-image-settings.mjs';
+import {createImageEditor,withColourCutout} from './app-image-editor.mjs';
+import {productImages,appVariantImageURLs,readAppListing,colourOption} from './app-image-settings.mjs';
 import {createEditorSession} from '../extensions/app-images/src/session.mjs';
 const img=n=>({id:`gid://shopify/MediaImage/${n}`,image:{url:`https://cdn.shopify.com/s/files/1/photo${n}.jpg`,altText:`Photo ${n}`}});
 const fixture=()=>({id:'gid://shopify/Product/123',title:'Charm',handle:'charm',status:'ACTIVE',publishedAt:'2026-01-01',media:{nodes:[img(1),img(2),img(3)],pageInfo:{hasNextPage:false}},appImages:null});
@@ -168,7 +168,7 @@ test('an optional silver cut-out saves as appCutoutSilver beside the gold one, s
  p=await h.api.save('123',{...p,cutoutSilverImageURL:`  ${silver} `});assert.equal(p.cutoutSilverImageURL,silver);
  const stored=JSON.parse(h.product.appImages.value);
  assert.equal(stored.version,1);assert.equal(stored.appCutoutSilver,silver);assert.equal(stored.appCutout,gold);assert.equal(stored.appCutoutHeightMm,31.5);
- assert.deepEqual(readAppListing(h.product.appImages),{appHidden:false,appCategory:'charms',appStory:null,cutoutImageURL:gold,cutoutSilverImageURL:silver,cutoutHeightMm:31.5});
+ assert.deepEqual(readAppListing(h.product.appImages),{appHidden:false,appCategory:'charms',appStory:null,cutoutImageURL:gold,cutoutSilverImageURL:silver,cutoutColours:{},cutoutHeightMm:31.5});
  // Saves of every other field keep it: photos, a listing change without the field, the story, the gold cut-out and the size.
  p.images[1].hidden=true;p=await h.api.save('123',p);assert.equal(p.cutoutSilverImageURL,silver);
  const {cutoutSilverImageURL:_,...withoutField}=p;p=await h.api.save('123',{...withoutField,appCategory:'earrings'});assert.equal(p.cutoutSilverImageURL,silver);
@@ -192,4 +192,95 @@ test('version 1 records without a silver cut-out stay readable and a malformed s
  // A malformed stored silver cut-out blocks the editor's save too, rather than being dropped silently.
  const h=harness();h.product.appImages={type:'json',compareDigest:'d',value:JSON.stringify({version:1,images:[],appCutoutSilver:'https://example.com/moon.png'})};
  await assert.rejects(h.api.get('123'),/silver cutout/);assert.ok(h.calls.every(x=>!x.query.startsWith('mutation')));
+});
+
+// Per-colour cut-outs (19 Nov 2026): appCutoutColours holds the colours after the first, each with a gold and/or silver one.
+const colourLink=name=>`https://cdn.shopify.com/s/files/1/0904/files/${name}.png?v=1`;
+const withColours=h=>{h.product.options=[{name:'Size',optionValues:[{name:'One size'}]},{name:'Acrylic Colour',optionValues:[{name:'Gold'},{name:'Silver'},{name:'Glitter Pink'}]}];return h;};
+test('version 1 records without colour cut-outs stay readable; valid ones read as cutoutColours and malformed ones fail closed',async()=>{
+ const field=value=>({type:'json',value:JSON.stringify({version:1,images:[],...value})});
+ assert.deepEqual(readAppListing(null).cutoutColours,{});assert.deepEqual(readAppListing(field({})).cutoutColours,{});
+ assert.deepEqual(readAppListing(field({appCutoutColours:null})).cutoutColours,{});assert.deepEqual(readAppListing(field({appCutoutColours:{}})).cutoutColours,{});
+ const gold=colourLink('moon-silver-acrylic-gold'),silver='https://cdn.shopify.com/s/files/1/moon-glitter-silver.WEBP';
+ assert.deepEqual(readAppListing(field({appCutout:colourLink('moon'),appCutoutColours:{Silver:{gold,silver:gold},'Glitter Pink':{silver},Gold:{gold}}})).cutoutColours,
+  {Silver:{goldImageURL:gold,silverImageURL:gold},'Glitter Pink':{goldImageURL:null,silverImageURL:silver},Gold:{goldImageURL:gold,silverImageURL:null}});
+ const twenty=Object.fromEntries(Array.from({length:20},(_,i)=>[`Colour ${i}`,{gold}]));
+ assert.equal(Object.keys(readAppListing(field({appCutoutColours:twenty})).cutoutColours).length,20);
+ assert.deepEqual(readAppListing(field({appCutoutColours:{['x'.repeat(60)]:{gold}}})).cutoutColours,{['x'.repeat(60)]:{goldImageURL:gold,silverImageURL:null}});
+ for(const appCutoutColours of [[],'Silver',true,7,[{gold}],{Silver:null},{Silver:[]},{Silver:'x'},{Silver:{}},{Silver:{gold:null}},{Silver:{gold,bronze:gold}},{Silver:{gold,silver:null}},
+  {Silver:{gold:'https://example.com/s/files/1/x.png'}},{Silver:{gold:'https://cdn.shopify.com/s/files/1/x.jpg'}},{Silver:{silver:'http://cdn.shopify.com/s/files/1/x.png'}},{Silver:{gold:` ${gold}`}},
+  {Silver:{gold:'https://cdn.shopify.com/s/files/1/'+'x'.repeat(2048)+'.png'}},{'':{gold}},{' Silver':{gold}},{'Silver ':{gold}},{['x'.repeat(61)]:{gold}},
+  {...twenty,'One more':{gold}}])assert.throws(()=>readAppListing(field({appCutoutColours})),/colour cutouts/,JSON.stringify(appCutoutColours).slice(0,80));
+ // A malformed stored map blocks the editor too, rather than being dropped silently on the next save.
+ const h=harness();h.product.appImages={type:'json',compareDigest:'d',value:JSON.stringify({version:1,images:[],appCutoutColours:{Silver:{gold:'https://example.com/x.png'}}})};
+ await assert.rejects(h.api.get('123'),/colour cutouts/);assert.ok(h.calls.every(x=>!x.query.startsWith('mutation')));
+});
+test('the colour option is found by name in any spelling and case, with its values in Shopify order',()=>{
+ for(const name of ['Color','Colour','colour','COLOR','Acrylic Colour','acrylic color',' Colour '])assert.deepEqual(colourOption({options:[{name:'Size',optionValues:[{name:'S'}]},{name,optionValues:[{name:'Gold'},{name:'Silver'}]}]}),{name,values:['Gold','Silver']});
+ for(const options of [undefined,[],[{name:'Size',optionValues:[{name:'Gold'}]}],[{name:'Hoop colour',optionValues:[]}],[{name:'Colours',optionValues:[]}]])assert.equal(colourOption({options}),null);
+});
+test('withColourCutout changes one colour and finish in place, and drops a colour left without pictures',()=>{
+ const a=colourLink('a'),b=colourLink('b'),start={Silver:{goldImageURL:a,silverImageURL:null},Glitter:{goldImageURL:null,silverImageURL:b}};
+ assert.deepEqual(withColourCutout(start,'Silver','silver',b),{Silver:{goldImageURL:a,silverImageURL:b},Glitter:{goldImageURL:null,silverImageURL:b}});
+ assert.deepEqual(Object.keys(withColourCutout(start,'Silver','gold',b)),['Silver','Glitter']);
+ assert.deepEqual(withColourCutout(start,'Glitter','silver',null),{Silver:{goldImageURL:a,silverImageURL:null}});
+ assert.deepEqual(withColourCutout({},'Pink','gold',a),{Pink:{goldImageURL:a,silverImageURL:null}});
+ assert.deepEqual(withColourCutout(undefined,'Pink','silver',''),{});
+ assert.deepEqual(start.Silver,{goldImageURL:a,silverImageURL:null},'the input is not changed');
+});
+test('colour cut-outs save as appCutoutColours, survive every other save, round trip, and removing a colour’s pictures removes it',async()=>{
+ const h=withColours(harness()),website=JSON.stringify(h.product.media),gold=colourLink('moon'),silver=colourLink('moon-silver');
+ let p=await h.api.get('123');assert.deepEqual(p.cutoutColours,{});assert.deepEqual(p.colourOption,{name:'Acrylic Colour',values:['Gold','Silver','Glitter Pink']});
+ assert.match(h.calls[0].query,/options\{name optionValues\{name\}\}/);
+ for(const bad of [{Silver:{goldImageURL:'https://example.com/s/files/1/x.png',silverImageURL:null}},{Silver:{goldImageURL:'https://cdn.shopify.com/s/files/1/x.jpg',silverImageURL:null}},{Silver:{goldImageURL:42,silverImageURL:null}},
+  {' Silver':{goldImageURL:gold,silverImageURL:null}},{Silver:'x'},['x'],'Silver',{Silver:null}]){
+  const writes=h.calls.filter(c=>c.query.startsWith('mutation')).length;
+  await assert.rejects(h.api.save('123',{...p,cutoutColours:bad}),{status:400},JSON.stringify(bad));
+  assert.equal(h.calls.filter(c=>c.query.startsWith('mutation')).length,writes);
+ }
+ // A colour that isn't one of the product's later colours (unknown, or the first one) can't gain a picture.
+ for(const colour of ['Bronze','Gold'])await assert.rejects(h.api.save('123',{...p,cutoutColours:{[colour]:{goldImageURL:gold,silverImageURL:null}}}),{status:409});
+ p=await h.api.save('123',{...p,cutoutImageURL:gold,cutoutSilverImageURL:silver,cutoutHeightMm:31.5});
+ const sg=colourLink('moon-silver-acrylic-gold'),ss=colourLink('moon-silver-acrylic-silver'),pg=colourLink('moon-glitter-gold');
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Silver','gold',`  ${sg} `)});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Silver','silver',ss)});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Glitter Pink','gold',pg)});
+ const colours={Silver:{goldImageURL:sg,silverImageURL:ss},'Glitter Pink':{goldImageURL:pg,silverImageURL:null}};
+ assert.deepEqual(p.cutoutColours,colours);
+ let stored=JSON.parse(h.product.appImages.value);
+ assert.equal(stored.version,1);assert.deepEqual(stored.appCutoutColours,{Silver:{gold:sg,silver:ss},'Glitter Pink':{gold:pg}});
+ assert.equal(stored.appCutout,gold);assert.equal(stored.appCutoutSilver,silver);assert.equal(stored.appCutoutHeightMm,31.5);
+ assert.deepEqual(readAppListing(h.product.appImages).cutoutColours,colours);
+ // Every other save keeps it: photos, a listing change without the field, the story, both cut-outs and the size.
+ p.images[1].hidden=true;p=await h.api.save('123',p);assert.deepEqual(p.cutoutColours,colours);
+ const {cutoutColours:_,...withoutField}=p;p=await h.api.save('123',{...withoutField,appCategory:'earrings'});assert.deepEqual(p.cutoutColours,colours);
+ p=await h.api.save('123',{...p,appStory:'A short story.'});assert.deepEqual(p.cutoutColours,colours);
+ p=await h.api.save('123',{...p,cutoutImageURL:null,cutoutSilverImageURL:null});assert.deepEqual(p.cutoutColours,colours);
+ p=await h.api.save('123',{...p,cutoutHeightMm:null});assert.deepEqual(p.cutoutColours,colours);
+ assert.deepEqual(JSON.parse(h.product.appImages.value).appCutoutColours,{Silver:{gold:sg,silver:ss},'Glitter Pink':{gold:pg}});
+ // Removing one picture keeps the colour; removing its last one removes the colour; an empty map is not stored.
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Silver','gold',null)});
+ assert.deepEqual(JSON.parse(h.product.appImages.value).appCutoutColours,{Silver:{silver:ss},'Glitter Pink':{gold:pg}});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Glitter Pink','gold','')});
+ assert.deepEqual(p.cutoutColours,{Silver:{goldImageURL:null,silverImageURL:ss}});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Silver','silver',null)});
+ assert.deepEqual(p.cutoutColours,{});stored=JSON.parse(h.product.appImages.value);assert.equal('appCutoutColours' in stored,false);
+ p=await h.api.save('123',{...p,cutoutColours:null});assert.equal('appCutoutColours' in JSON.parse(h.product.appImages.value),false);
+ assert.equal(JSON.stringify(h.product.media),website);
+ assert.doesNotMatch(h.calls.map(x=>x.query).join('\n'),/fileCreate|stagedUploadsCreate|productCreateMedia|productUpdate|productOption/);
+});
+test('stored colour cut-outs for a colour the product no longer has are kept and can be removed, but not added to',async()=>{
+ const h=withColours(harness()),old=colourLink('old-blue');
+ h.product.appImages={type:'json',compareDigest:'d',value:JSON.stringify({version:1,images:[],appCutoutColours:{Blue:{gold:old,silver:old},Gold:{gold:old}}})};
+ let p=await h.api.get('123');assert.deepEqual(Object.keys(p.cutoutColours),['Blue','Gold']);
+ p=await h.api.save('123',{...p,appStory:'Kept.'});assert.deepEqual(JSON.parse(h.product.appImages.value).appCutoutColours,{Blue:{gold:old,silver:old},Gold:{gold:old}});
+ await assert.rejects(h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Blue','gold',colourLink('new-blue'))}),{status:409});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Blue','gold',null)});
+ p=await h.api.save('123',{...p,cutoutColours:withColourCutout(p.cutoutColours,'Blue','silver',null)});
+ assert.deepEqual(JSON.parse(h.product.appImages.value).appCutoutColours,{Gold:{gold:old}});
+ // Twenty colours at most, counted after empty entries are dropped.
+ h.product.options[1].optionValues=[{name:'First'},...Array.from({length:21},(_,i)=>({name:`C${i}`}))];p=await h.api.get('123');
+ const many=Object.fromEntries(Array.from({length:21},(_,i)=>[`C${i}`,{goldImageURL:old,silverImageURL:null}]));
+ await assert.rejects(h.api.save('123',{...p,cutoutColours:many}),{status:400});
+ p=await h.api.save('123',{...p,cutoutColours:{...many,C20:{goldImageURL:null,silverImageURL:''}}});assert.equal(Object.keys(p.cutoutColours).length,20);
 });

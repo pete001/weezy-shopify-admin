@@ -1,7 +1,18 @@
-import {IMAGE_NAMESPACE,IMAGE_KEY,IMAGE_FIELD,IMAGE_MEDIA,productImages,imageURL,readAppListing,defaultAppCategory,APP_CATEGORIES,readAppVariantImages,cutoutURL,cutoutHeight} from './app-image-settings.mjs';
+import {IMAGE_NAMESPACE,IMAGE_KEY,IMAGE_FIELD,IMAGE_MEDIA,productImages,imageURL,readAppListing,defaultAppCategory,APP_CATEGORIES,readAppVariantImages,cutoutURL,cutoutHeight,cutoutColourName,colourOption,CUTOUT_COLOUR_LIMIT} from './app-image-settings.mjs';
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const fingerprint=p=>JSON.stringify(p.media?.nodes??[]);
 const selection=images=>images.map(({id,hidden})=>({id,hidden}));
+const finishKey=finish=>finish==='silver'?'silverImageURL':'goldImageURL';
+// One colour's gold or silver cut-out changed in the editor's map ({"Silver":{goldImageURL,silverImageURL}}), in
+// place; a colour left with neither picture is removed. Pure, so a save of one box never touches another colour.
+export function withColourCutout(colours,colour,finish,url) {
+  const entries=Object.entries(colours??{}),blank={goldImageURL:null,silverImageURL:null};
+  const old=entries.find(([k])=>k===colour)?.[1]??blank,entry={...blank,...old,[finishKey(finish)]:url||null};
+  const keep=!!(entry.goldImageURL||entry.silverImageURL);
+  const next=entries.flatMap(([k,v])=>k!==colour?[[k,v]]:keep?[[k,entry]]:[]);
+  if(keep&&!entries.some(([k])=>k===colour))next.push([colour,entry]);
+  return Object.fromEntries(next);
+}
 /** @param {{request:(query:string,variables:Record<string,unknown>)=>Promise<any>,bundled?:Array<{handle:string,heroImageURL?:string}>,onSaved?:()=>void}} options */
 export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
   const heroes=new Map(bundled.map(p=>[p.handle,p.heroImageURL]));
@@ -18,7 +29,7 @@ export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
   }
   async function raw(id) {
     if(!/^\d{1,30}$/.test(id))throw fail(400,'Choose a valid product.');
-    const {product}=await query(`query AppImageProduct($id:ID!){product(id:$id){id handle title description productType collections(first:20){nodes{handle}} status publishedAt hero:metafield(namespace:"charm_club",key:"hero_image"){type value reference{... on MediaImage{image{url}}}} ${IMAGE_FIELD} ${IMAGE_MEDIA} variants(first:250){nodes{id title image{url}}pageInfo{hasNextPage}}}}`,{id:`gid://shopify/Product/${id}`});
+    const {product}=await query(`query AppImageProduct($id:ID!){product(id:$id){id handle title description productType collections(first:20){nodes{handle}} status publishedAt options{name optionValues{name}} hero:metafield(namespace:"charm_club",key:"hero_image"){type value reference{... on MediaImage{image{url}}}} ${IMAGE_FIELD} ${IMAGE_MEDIA} variants(first:250){nodes{id title image{url}}pageInfo{hasNextPage}}}}`,{id:`gid://shopify/Product/${id}`});
     if(!product||product.status!=='ACTIVE'||!product.publishedAt)throw fail(404,'This product is no longer published.');
     return product;
   }
@@ -28,7 +39,7 @@ export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
     const variants=(p.variants?.nodes??[]).map(v=>({id:v.id.split('/').at(-1),title:v.title,imageURL:imageURL(v.image?.url)??null}));
     const map=readAppVariantImages(p.appImages);
     const appVariantImages=Object.fromEntries(Object.entries(map).filter(([id,media])=>variants.some(v=>v.id===id)&&images.some(i=>i.id===media)));
-    return {...listing,websiteDescription:p.description??'',variants,appVariantImages,appCategory:listing.appCategory??defaultAppCategory(p),categorySource:listing.appCategory?"App override":"Automatic",id:p.id.split('/').at(-1),handle:p.handle,title:p.title,images,
+    return {...listing,colourOption:colourOption(p),websiteDescription:p.description??'',variants,appVariantImages,appCategory:listing.appCategory??defaultAppCategory(p),categorySource:listing.appCategory?"App override":"Automatic",id:p.id.split('/').at(-1),handle:p.handle,title:p.title,images,
       digest:p.appImages?.compareDigest??null,mediaRevision:fingerprint(p),reviewed:!!p.appImages,updatedAt:p.appImages?.updatedAt??null,
       shopifyURL:`shopify:admin/products/${p.id.split('/').at(-1)}`};
   }
@@ -61,10 +72,25 @@ export function createImageEditor({request,bundled=[],onSaved=()=>{}}) {
       const silver=Object.hasOwn(input,'cutoutSilverImageURL')?input.cutoutSilverImageURL:current.cutoutSilverImageURL;
       const appCutoutSilver=silver===null||silver===''?null:cutoutURL(silver);
       if(appCutoutSilver===undefined)throw fail(400,'Paste the Shopify Files link of a PNG or WebP silver cut-out (it starts with https://cdn.shopify.com/s/files/).');
+      // Cut-outs for the other acrylic colours: kept as they are unless this save changes them. A new or changed
+      // picture must be for one of the product's colours after the first; removing one is always allowed.
+      const colourInput=Object.hasOwn(input,'cutoutColours')?input.cutoutColours:current.cutoutColours;
+      if(colourInput!=null&&(typeof colourInput!=='object'||Array.isArray(colourInput)))throw fail(400,'Please reload this product before editing.');
+      const colourEntries=[];
+      for(const [colour,entry] of Object.entries(colourInput??{})){
+        if(cutoutColourName(colour)===undefined||!entry||typeof entry!=='object'||Array.isArray(entry))throw fail(400,'Choose one of this product’s acrylic colours for the cut-out.');
+        const link=value=>value==null||value===''?null:cutoutURL(value),gold=link(entry.goldImageURL),silver=link(entry.silverImageURL);
+        if(gold===undefined||silver===undefined)throw fail(400,`Paste the Shopify Files link of a PNG or WebP cut-out for ${colour} acrylic (it starts with https://cdn.shopify.com/s/files/).`);
+        const was=Object.hasOwn(current.cutoutColours,colour)?current.cutoutColours[colour]:{goldImageURL:null,silverImageURL:null};
+        if((gold&&gold!==was.goldImageURL||silver&&silver!==was.silverImageURL)&&!(colourOption(before)?.values??[]).slice(1).includes(colour))throw fail(409,'This product’s colours changed. Reload it from Shopify before adding that cut-out.');
+        if(gold||silver)colourEntries.push([colour,{...(gold?{gold}:{}),...(silver?{silver}:{})}]);
+      }
+      if(colourEntries.length>CUTOUT_COLOUR_LIMIT)throw fail(400,`Add cut-outs for up to ${CUTOUT_COLOUR_LIMIT} colours.`);
+      const appCutoutColours=Object.fromEntries(colourEntries);
       const height=Object.hasOwn(input,'cutoutHeightMm')?input.cutoutHeightMm:current.cutoutHeightMm;
       const appCutoutHeightMm=height===null||height===''?null:cutoutHeight(height);
       if(appCutoutHeightMm===undefined)throw fail(400,'Enter the charm’s hanging height in mm, between 5 and 120.');
-      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{}),...(appCutoutSilver?{appCutoutSilver}:{}),...(appCutoutHeightMm!=null?{appCutoutHeightMm}:{})});
+      const value=JSON.stringify({version:1,images:selection(input.images),appHidden,appCategory,...(appStory?{appStory:appStory.trim()}:{}),...(Object.keys(cleaned).length?{variant_images:cleaned}:{}),...(appCutout?{appCutout}:{}),...(appCutoutSilver?{appCutoutSilver}:{}),...(colourEntries.length?{appCutoutColours}:{}),...(appCutoutHeightMm!=null?{appCutoutHeightMm}:{})});
       const data=await query('mutation SaveAppImages($metafields:[MetafieldsSetInput!]!){metafieldsSet(metafields:$metafields){metafields{namespace key value compareDigest updatedAt}userErrors{code message}}}',{
         metafields:[{ownerId:before.id,namespace:IMAGE_NAMESPACE,key:IMAGE_KEY,type:'json',value,compareDigest:input.digest}]
       });

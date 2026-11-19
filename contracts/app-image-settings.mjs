@@ -19,6 +19,27 @@ export const cutoutHeight = value => {
   const n=typeof value==='string'&&value.trim()!==''?Number(value):value;
   return typeof n==='number'&&Number.isFinite(n)&&n>=5&&n<=120 ? Math.round(n*10)/10 : undefined;
 };
+// Since 19 Nov 2026: cut-outs for a charm's other acrylic colours, in `appCutoutColours`. The product's colour option
+// is named "Color", "Colour" or "Acrylic Colour" (any case). Its FIRST value is the charm's default look and keeps
+// using appCutout (gold) and appCutoutSilver (silver); the map holds the other values, keyed exactly as Shopify stores
+// them, each with a gold and/or silver cut-out. An entry keyed by the first value is valid but readers ignore it.
+// The one appCutoutHeightMm applies to every colour and finish.
+export const COLOUR_OPTION = /^(acrylic\s+)?colou?r$/i;
+export const CUTOUT_COLOUR_LIMIT = 20;
+export const cutoutColourName = value => typeof value==='string'&&value===value.trim()&&value.length>=1&&value.length<=60 ? value : undefined;
+export function colourOption(product) {
+  const option=(product?.options??[]).find(o=>typeof o?.name==='string'&&COLOUR_OPTION.test(o.name.trim()));
+  return option ? {name:option.name,values:(option.optionValues??[]).map(v=>v?.name).filter(v=>typeof v==='string')} : null;
+}
+const plainObject = value => value!==null&&typeof value==='object'&&!Array.isArray(value);
+// Stored {"Silver":{"gold":url,"silver":url}} becomes {"Silver":{goldImageURL,silverImageURL}}; {} when absent.
+export function readCutoutColours(value) {
+  if(value==null)return {};
+  const entries=plainObject(value)?Object.entries(value):null;
+  if(!entries||entries.length>CUTOUT_COLOUR_LIMIT||entries.some(([colour,entry])=>cutoutColourName(colour)===undefined||!plainObject(entry)||
+    !Object.keys(entry).length||Object.keys(entry).some(k=>k!=='gold'&&k!=='silver')||Object.values(entry).some(url=>cutoutURL(url)!==url)))throw Error('Invalid colour cutouts');
+  return Object.fromEntries(entries.map(([colour,entry])=>[colour,{goldImageURL:entry.gold??null,silverImageURL:entry.silver??null}]));
+}
 export const imageIdentity = value => { const safe=imageURL(value); return safe ? new URL(safe).pathname : null; };
 export function defaultHidden(url,alt='') {
   let filename;try{filename=decodeURIComponent(new URL(url).pathname.split('/').at(-1));}catch{filename=url;}
@@ -49,15 +70,16 @@ export function productImages(product,{heroURL}={}) {
 
 export const APP_CATEGORIES = ['charms','earrings','sets','accessories','chains'];
 export function readAppListing(field) {
-  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null,cutoutSilverImageURL:null,cutoutHeightMm:null};
+  if (!field) return {appHidden:false,appCategory:null,appStory:null,cutoutImageURL:null,cutoutSilverImageURL:null,cutoutColours:{},cutoutHeightMm:null};
   readImageSettings(field);
   const value=JSON.parse(field.value);
   if(value.appHidden!==undefined&&typeof value.appHidden!=='boolean' || value.appCategory!=null&&!APP_CATEGORIES.includes(value.appCategory)) throw Error('Invalid app product settings');
   if(value.appStory!=null&&(typeof value.appStory!=='string'||value.appStory.length>1800||!value.appStory.trim()))throw Error('Invalid app story');
   if(value.appCutout!=null&&cutoutURL(value.appCutout)!==value.appCutout)throw Error('Invalid app cutout');
   if(value.appCutoutSilver!=null&&cutoutURL(value.appCutoutSilver)!==value.appCutoutSilver)throw Error('Invalid silver cutout');
+  const cutoutColours=readCutoutColours(value.appCutoutColours);
   if(value.appCutoutHeightMm!=null&&(typeof value.appCutoutHeightMm!=='number'||cutoutHeight(value.appCutoutHeightMm)!==value.appCutoutHeightMm))throw Error('Invalid charm size');
-  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null,cutoutSilverImageURL:value.appCutoutSilver??null,cutoutHeightMm:value.appCutoutHeightMm??null};
+  return {appHidden:value.appHidden??false,appCategory:value.appCategory??null,appStory:value.appStory??null,cutoutImageURL:value.appCutout??null,cutoutSilverImageURL:value.appCutoutSilver??null,cutoutColours,cutoutHeightMm:value.appCutoutHeightMm??null};
 }
 export function defaultAppCategory(product) {
   const title=(product.title??'').toLowerCase(),type=(product.productType??'').toLowerCase();
